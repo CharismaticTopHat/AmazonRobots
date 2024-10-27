@@ -25,8 +25,6 @@ from Robot import Robot
 opera = OpMat()
 r1 = Robot(opera)
 
-deg = 0
-
 pygame.init()
 
 def Axis():
@@ -47,15 +45,9 @@ def Axis():
     glLineWidth(1.0)
     
 def display():
-    global deg 
-    opera.push()
     opera.scale(25,25)
     r1.setColor(1.0,1.0,1.0)
     r1.render()
-    opera.pop()
-    deg = deg + 1.0
-    if deg > 360.0:
-        deg = deg % 360.0
         
 opera.loadId()
 
@@ -84,9 +76,9 @@ while not done:
         if event.type == pygame.QUIT:
             done = True
         if keys[pygame.K_UP]:
-            pass
+            r1.moveUp()
         if keys[pygame.K_DOWN]:
-            pass
+            r1.moveDown()
         if keys[pygame.K_LEFT]:
             r1.turnLeft()
         if keys[pygame.K_RIGHT]:

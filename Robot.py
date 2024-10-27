@@ -1,4 +1,5 @@
 import pygame
+import math
 import numpy as np
 
 from pygame.locals import *
@@ -26,13 +27,19 @@ class Robot:
         self.pos = [0.0,0.0, 1.0]
         self.delta_dir = [1.0,0.0,0.0]
         self.theta = 0
-        self.delta_theta = 1.0
-        self.color = [1.0, 1.0, 1.0]
         self.scale = 1
+        self.color = [1.0, 1.0, 1.0]
+        self.remRotation = 0  
+        self.delta_theta = 2
     
     def update(self):
-        self.op.matrixStack
-        
+        if self.remRotation > 0:
+            self.theta += self.delta_theta
+            self.remRotation -= 1
+        self.pos = self.pos + self.delta_dir
+        radians = math.radians(self.theta)
+        self.delta_dir[0] = math.cos(radians)
+        self.delta_dir[1] = math.sin(radians)
         
     def setColor(self, r, g, b):
         self.color = [r, g, b]
@@ -94,29 +101,39 @@ class Robot:
         
     def render(self):
         pointsR = self.points.copy()
+        self.opera.push()
+        self.opera.translate(self.pos[0], self.pos[1])
+        self.opera.rotate(self.theta)
+        self.opera.scale(self.scale, self.scale)
         pointsR = self.opera.mult_Points(pointsR)
+        self.opera.pop()
         glColor3fv(self.color)
-        # Cuerpo principal
+
         for i in range(4):
             self.Bresenham(pointsR[i], pointsR[(i + 1) % 4]) 
-        # Llantas
+
         wheel_offsets = [4, 8, 12, 16]
         for offset in wheel_offsets:
             for i in range(4):
                 self.Bresenham(pointsR[offset + i], pointsR[offset + (i + 1) % 4])
+
+        self.update()
+
                 
     def turnRight(self):
-        self.theta -= self.delta_theta  
-        self.opera.rotate(self.theta) 
+        if self.remRotation == 0:  # Only start a turn if not already turning
+            self.remRotation = 90
+            self.delta_theta = -1
 
     def turnLeft(self):
-        self.theta += self.delta_theta  
-        self.opera.rotate(self.theta)  
+        if self.remRotation == 0:
+            self.remRotation = 90
+            self.delta_theta = 1
     
     def moveUp(self):
-        self.opera.translate(self.dir, 0)
-        self.dir = self.dir + self.delta_dir
+            self.pos[0] += self.delta_dir[0]
+            self.pos[1] += self.delta_dir[1]
 
     def moveDown(self):
-        self.opera.translate(self.dir, 0)
-        self.dir = self.dir - self.delta_dir
+            self.pos[0] -= self.delta_dir[0]
+            self.pos[1] -= self.delta_dir[1]
