@@ -30,12 +30,12 @@ class Robot:
         self.scale = 1
         self.color = [1.0, 1.0, 1.0]
         self.remRotation = 0  
-        self.delta_theta = 2
+        self.delta_theta = 5
     
     def update(self):
         if self.remRotation > 0:
             self.theta += self.delta_theta
-            self.remRotation -= 1
+            self.remRotation -= 5
         self.pos = self.pos + self.delta_dir
         radians = math.radians(self.theta)
         self.delta_dir[0] = math.cos(radians)
@@ -123,12 +123,12 @@ class Robot:
     def turnRight(self):
         if self.remRotation == 0:  # Only start a turn if not already turning
             self.remRotation = 90
-            self.delta_theta = -1
+            self.delta_theta = -5
 
     def turnLeft(self):
         if self.remRotation == 0:
             self.remRotation = 90
-            self.delta_theta = 1
+            self.delta_theta = 5
     
     def moveUp(self):
             self.pos[0] += self.delta_dir[0]
