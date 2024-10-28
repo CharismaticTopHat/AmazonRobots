@@ -8,7 +8,7 @@
     let [gridSize, setGridSize] = useState(80);
     let [probability_of_spread, setProbability] = useState(100);
     let [simSpeed,setSimSpeed] = useState(2);
-    let [trees, setTrees] = useState([]);
+    let [boxes, setBoxes] = useState([]);
     let [iterations, setIterations] = useState(0);
     let [burntPerc, setBurntPerc] = useState(0);
     let [number, setNumber] = useState(40);
@@ -17,7 +17,7 @@
     let [west_wind_speed, setWestWindSpeed] = useState(0);
     let [bigJumps, setBigJumps] = useState(false);
 
-    const burntTrees = useRef(null);
+    const burntBoxes = useRef(null);
     const sizing = 12.5;
     const running = useRef(null);
 
@@ -37,21 +37,21 @@
       }).then(resp => resp.json())
       .then(data => {
         setLocation(data["Location"]);
-        setTrees(data["trees"]);
+        setBoxes(data["boxes"]);
         setIterations(0);
         setBurntPerc(0);
       });
     }
 
     let handleStart = () => {
-      burntTrees.current = [];
+      burntBoxes.current = [];
       running.current = setInterval(() => {
         fetch("http://localhost:8000" + location)
         .then(res => res.json())
         .then(data => {
-          let burnt = data["trees"].filter(t => t.status == "burnt").length / data["trees"].length;
-          burntTrees.current.push(burnt);
-          setTrees(data["trees"]);
+          let burnt = data["boxes"].filter(b => b.status == "delivered").length / data["boxes"].length;
+          burntBoxes.current.push(burnt);
+          setBoxes(data["boxes"]);
           setIterations(prev => prev + 1);
           setBurntPerc((burnt * 100).toFixed(2));
         });
@@ -86,7 +86,7 @@
         <SwitchField label="Big Jump"
           checked={bigJumps} onChange={(e) => setBigJumps(e.target.checked)} />
         <p>Iterations: {iterations}</p> 
-        <p>Burnt trees percentage: {burntPerc}%</p>
+        <p>Burnt boxes percentage: {burntPerc}%</p>
         
         <svg width={sizing * sliderGridSize} height={sizing * sliderGridSize} xmlns="http://www.w3.org/2000/svg" style={{backgroundColor:"white"}}>
   {
@@ -118,11 +118,11 @@
     ))
   }
   {
-    trees.map(tree => (
+    boxes.map(box => (
       <image
-        key={tree["id"]}
-        x={(tree["pos"][0] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
-        y={(tree["pos"][1] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
+        key={box["id"]}
+        x={(box["pos"][0] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
+        y={(box["pos"][1] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
         width={sizing}  // Tamaño de la imagen ajustado al tamaño de la celda
         height={sizing} // Alto ajustado al tamaño de la celda
         href={"./caja.png"} // Ruta a la imagen

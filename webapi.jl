@@ -10,28 +10,40 @@ route("/simulations", method = POST) do
     y = payload["dim"][2]
     number = payload["number"]
 
-    model = box_set(griddims=(x,y), number =(number))
+    model = initialize_model(griddims=(x,y), number =(number))
     id = string(uuid1())
     instances[id] = model
 
-    trees = []
-    for tree in allagents(model)
-        push!(trees, tree)
+    boxes = []
+    cars = []
+    for agent in allagents(model)
+        if agent isa box
+            push!(boxes, agent)
+        elseif agent isa car
+            push!(cars, agent)
+        end
     end
     
-    json(Dict(:msg => "Hola", "Location" => "/simulations/$id", "trees" => trees))
+    json(Dict(:msg => "Hola", "Location" => "/simulations/$id", "boxes" => boxes, "cars" => cars))
 end
 
 route("/simulations/:id") do
-    model = instances[payload(:id)]
-    
+
+    model_id = payload(:id)
+    model = instances[model_id]
     run!(model, 1)
-    trees = []
-    for tree in allagents(model)
-        push!(trees, tree)
+
+    boxes = []
+    cars = []
+    for agent in allagents(model)
+        if agent isa box
+            push!(boxes, agent)
+        elseif agent isa car
+            push!(cars, agent)
+        end
     end
     
-    json(Dict(:msg => "Adios", "trees" => trees))
+    json(Dict(:msg => "Adios", "boxes" => boxes, "cars" => cars))
 end
 
 Genie.config.run_as_server = true

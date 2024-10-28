@@ -2,18 +2,24 @@ using Agents, Random
 using StaticArrays: SVector
 
 # waiting = 0, taken = 1, developed = 0
-@enum TreeStatus waiting taken developed
+@enum BoxStatus waiting taken developed
+@enum CarStatus empty full
 
 normal = 0
 left = π/2
 down = π
 right = 3π/2
 
-@agent struct Box(GridAgent{2})
-    status::TreeStatus = waiting
+@agent struct box(GridAgent{2})
+    status::BoxStatus = waiting
 end
 
-function find_agent_in_position(model, pos)
+@agent struct car(ContinuousAgent{2,Float64})
+    street::CarStatus = empty
+    orientation::Float64 = normal
+end
+
+function find_agent_in_position(pos, model)
     for agent in allagents(model)
         if agent.pos == pos
             return agent
@@ -23,17 +29,18 @@ function find_agent_in_position(model, pos)
 end
 
 
-function box_step(tree::Box, model)
-    #Solo si se está "quemando", puede quemar otros agentes
-    if tree.status == taken
-        #Identifica árboles alrededor del agente
-        for neighbor in nearby_agents(tree, model)
+
+function agent_step!(agent::box, model)
+    if agent.status == taken
+        for neighbor in nearby_agents(agent, model)
             if neighbor.status == waiting
                 spread_adjustment = 0
                 
-                # Dirección del vecino
-                dx = neighbor.pos[1] - tree.pos[1]
-                dy = neighbor.pos[2] - tree.pos[2]
+                # Calcular las diferencias en posición
+                dx = neighbor.pos[1] - agent.pos[1]
+                dy = neighbor.pos[2] - agent.pos[2]
+                
+                # Ajustar según la dirección del viento
                 if dy < 0  # Norte
                     spread_adjustment += model.south_wind_speed
                 elseif dy > 0  # Sur
@@ -44,51 +51,64 @@ function box_step(tree::Box, model)
                 elseif dx > 0  # Oeste
                     spread_adjustment += -model.west_wind_speed
                 end
-                # Asegurar que la probabilidad sea de 0% - 100%
-                adjusted_spread_prob = model.probability_of_spread + spread_adjustment
-                if rand(Uniform(1,100)) <= adjusted_spread_prob
+
+                # Ajustar la probabilidad de propagación
+                adjusted_spread_prob = clamp(model.probability_of_spread + spread_adjustment, 0, 100)
+                if rand(Uniform(1, 100)) <= adjusted_spread_prob
                     neighbor.status = taken
-                    if model.bigJumps == true && model.south_wind_speed != 0 && model.west_wind_speed != 0
-                        south_min = min(round(Int, model.south_wind_speed / 15), 0)
-                        south_max = max(round(Int, model.south_wind_speed / 15), 0)
-                        spark_reach_south = round(Int, rand(Uniform(south_min, south_max)))
-                        println(spark_reach_south)
-                        west_min = min(round(model.west_wind_speed / 15), 0)
-                        west_max = max(round(model.west_wind_speed / 15), 0)
-                        spark_reach_west = round(Int, rand(Uniform(west_min, west_max)))
-                        println(spark_reach_west)
+
+                    # Saltos grandes si es necesario
+                    if model.bigJumps && model.south_wind_speed != 0 && model.west_wind_speed != 0
+                        spark_reach_south = round(Int, rand(Uniform(min(round(Int, model.south_wind_speed / 15), 0), max(round(Int, model.south_wind_speed / 15), 0))))
+                        spark_reach_west = round(Int, rand(Uniform(min(round(model.west_wind_speed / 15), 0), max(round(model.west_wind_speed / 15), 0))))
+                        
                         if spark_reach_south != 0 && spark_reach_west != 0
-                            new_pos = (
-                                neighbor.pos[1] - spark_reach_west,
-                                neighbor.pos[2] - spark_reach_south
-                            )
-                            new_neighbor = find_agent_in_position(model, new_pos)
+                            new_pos = (neighbor.pos[1] - spark_reach_west, neighbor.pos[2] - spark_reach_south)
+                            new_neighbor = find_agent_in_position(new_pos, model)
                             if new_neighbor !== nothing
-                                println("Cambiando vecino de $(neighbor.pos) a $(new_neighbor.pos)")
                                 neighbor = new_neighbor
                                 neighbor.status = taken
-                                end
                             end
                         end
                     end
                 end
             end
-            tree.status = developed
+        end
+        agent.status = developed
+    end
+end
+
+function agent_step!(agent::car, model)
+    if agent.street == empty
+        # Lógica para cambiar el estado a 'full'
+        agent.street = full
+    elseif agent.street == full
+        # Lógica para cambiar el estado a 'empty'
+        agent.street = empty
+    end
+end
+
+
+    function agent_step!(agent::car, model)
+        # Logic to handle car behavior, e.g., switching between empty and full
+        if car.status == :empty
+            # Logic to change status to full
+        elseif car.status == :full
+            # Logic to change status back to empty
         end
     end
 
-
-    function box_set(; number = 1600.0, initialize = 5, griddims = (80, 80), probability_of_spread = 0, south_wind_speed = 0, west_wind_speed = 0, bigJumps = false)
-        space = GridSpaceSingle(griddims; periodic = false, metric = :euclidean)
-        box = StandardABM(Box, space; agent_step! = box_step, scheduler = Schedulers.Randomly(), properties = Dict(:probability_of_spread => probability_of_spread, :number => number, :south_wind_speed => south_wind_speed, :west_wind_speed => west_wind_speed, :bigJumps => bigJumps))
-        # Convertimos positions(forest) a una lista (Vector)
-        all_positions = collect(positions(box))
-    
-        # Seleccionamos 40 posiciones aleatorias sin reemplazo
-        random_positions = sample(all_positions, number, replace=false)
-    
-        for pos in random_positions
-            tree = add_agent!(pos, box)
+    function initialize_model(; number = 40, griddims = (80, 80))
+        space = GridSpaceSingle(griddims; periodic = false, metric = :manhattan)
+        model = StandardABM(Union{car, box}, space; agent_step!, scheduler = Schedulers.fastest)
+        
+        all_positions = [(x, y) for x in 1:griddims[1], y in 1:griddims[2]]
+        shuffled_positions = shuffle(all_positions)
+        
+        for pos in shuffled_positions[1:number]
+            add_agent!(box, model; pos = pos)
         end
-        return box
+    
+        return model
     end
+    
