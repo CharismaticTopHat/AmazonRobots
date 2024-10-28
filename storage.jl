@@ -14,7 +14,7 @@ right = 3π/2
     status::BoxStatus = waiting
 end
 
-@agent struct car(ContinuousAgent{2,Float64})
+@agent struct car(GridAgent{2})  # Cambiado a GridAgent para ser consistente con GridSpace
     street::CarStatus = empty
     orientation::Float64 = normal
 end
@@ -27,8 +27,6 @@ function find_agent_in_position(pos, model)
     end
     return nothing
 end
-
-
 
 function agent_step!(agent::box, model)
     if agent.status == taken
@@ -88,27 +86,49 @@ function agent_step!(agent::car, model)
     end
 end
 
+function initialize_model(; number = 40, griddims = (80, 80))
+    space = GridSpaceSingle(griddims; periodic = false, metric = :manhattan)
+    model = StandardABM(Union{car, box}, space; agent_step!, scheduler = Schedulers.fastest)
+    
+    all_positions = [(x, y) for x in 1:griddims[1], y in 1:griddims[2]]
+    shuffled_positions = shuffle(all_positions)
+    
+    # Calcular posiciones para los autos proporcionalmente al tamaño del grid
+    top_y = 1  # Línea superior
+    bottom_y = griddims[2]  # Línea inferior
 
-    function agent_step!(agent::car, model)
-        # Logic to handle car behavior, e.g., switching between empty and full
-        if car.status == :empty
-            # Logic to change status to full
-        elseif car.status == :full
-            # Logic to change status back to empty
-        end
+    # Posiciones de los autos
+    car_positions = [
+        (round(Int, griddims[1] * 0.25), top_y),   # Auto 1 superior
+        (round(Int, griddims[1] * 0.75), top_y),   # Auto 2 superior
+        (round(Int, griddims[1] * 0.15), bottom_y), # Auto 1 inferior
+        (round(Int, griddims[1] * 0.50), bottom_y), # Auto 2 inferior
+        (round(Int, griddims[1] * 0.85), bottom_y)  # Auto 3 inferior
+    ]
+    
+    # Agregar los autos al modelo
+    for car_pos in car_positions
+        add_agent!(car, model; pos = car_pos)
+    end
+    
+    # Lista de posiciones restringidas (ocupadas por autos o sus vecinos)
+    restricted_positions = []
+    for car_pos in car_positions
+        append!(restricted_positions, [(car_pos[1] + dx, car_pos[2] + dy) for dx in -1:1, dy in -1:1])
+    end
+    
+    # Relocalizar las cajas si están demasiado cerca de los autos
+    valid_positions = setdiff(shuffled_positions, restricted_positions)
+    
+    # Asegurarse de que haya suficientes posiciones válidas para todas las cajas
+    if length(valid_positions) < number
+        error("No hay suficientes posiciones válidas para las cajas")
     end
 
-    function initialize_model(; number = 40, griddims = (80, 80))
-        space = GridSpaceSingle(griddims; periodic = false, metric = :manhattan)
-        model = StandardABM(Union{car, box}, space; agent_step!, scheduler = Schedulers.fastest)
-        
-        all_positions = [(x, y) for x in 1:griddims[1], y in 1:griddims[2]]
-        shuffled_positions = shuffle(all_positions)
-        
-        for pos in shuffled_positions[1:number]
-            add_agent!(box, model; pos = pos)
-        end
-    
-        return model
+    # Agregar las cajas a posiciones válidas
+    for i in 1:number
+        add_agent!(box, model; pos = valid_positions[i])
     end
     
+    return model
+end

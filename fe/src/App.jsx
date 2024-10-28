@@ -9,6 +9,7 @@
     let [probability_of_spread, setProbability] = useState(100);
     let [simSpeed,setSimSpeed] = useState(2);
     let [boxes, setBoxes] = useState([]);
+    let [cars, setCars] = useState([]);
     let [iterations, setIterations] = useState(0);
     let [burntPerc, setBurntPerc] = useState(0);
     let [number, setNumber] = useState(40);
@@ -38,6 +39,7 @@
       .then(data => {
         setLocation(data["Location"]);
         setBoxes(data["boxes"]);
+        setCars(data["cars"]);
         setIterations(0);
         setBurntPerc(0);
       });
@@ -52,6 +54,7 @@
           let burnt = data["boxes"].filter(b => b.status == "delivered").length / data["boxes"].length;
           burntBoxes.current.push(burnt);
           setBoxes(data["boxes"]);
+          setCars(data["cars"]);
           setIterations(prev => prev + 1);
           setBurntPerc((burnt * 100).toFixed(2));
         });
@@ -126,6 +129,18 @@
         width={sizing}  // Tamaño de la imagen ajustado al tamaño de la celda
         height={sizing} // Alto ajustado al tamaño de la celda
         href={"./caja.png"} // Ruta a la imagen
+      />
+    ))
+  }
+  {
+    cars.map(car => (
+      <image
+        key={car["id"]}
+        x={(car["pos"][0] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
+        y={(car["pos"][1] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
+        width={sizing}  // Tamaño de la imagen ajustado al tamaño de la celda
+        height={sizing} // Alto ajustado al tamaño de la celda
+        href={"./vite.svg"} // Ruta a la imagen
       />
     ))
   }
