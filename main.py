@@ -1,6 +1,4 @@
 import pygame
-import math
-import numpy as np
 
 from pygame.locals import *
 
@@ -21,9 +19,11 @@ Y_MAX=500
 # Archivos propios
 from OpMat import OpMat
 from Robot import Robot
+from Box import Box
 
 opera = OpMat()
 r1 = Robot(opera)
+b1 = Box(opera)
 
 pygame.init()
 
@@ -45,9 +45,10 @@ def Axis():
     glLineWidth(1.0)
     
 def display():
-    opera.scale(25,25)
     r1.setColor(1.0,1.0,1.0)
     r1.render()
+    b1.setColor(1.0,1.0,0.0)
+    b1.render()
         
 opera.loadId()
 

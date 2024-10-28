@@ -7,16 +7,10 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 
-class Robot:
+class Box:
     def __init__(self, op):
         self.points = [
-            #Main Body
-            [-4.0, -2.0, 1.0], [4.0, -2.0, 1.0], [4.0,2.0,1.0],[-4.0,2.0,1.0],
-            # Wheels (From Up-Left to Down-Right)
-            [-4.0,3.0,1.0], [-2.0,3.0,1.0], [-2.0,4.0,1.0],[-4.0,4.0,1.0],
-            [1.0,3.0,1.0], [3.0,3.0,1.0], [3.0,4.0,1.0], [1.0,4.0,1.0],
-            [-4.0,-4.0,1.0], [-2.0,-4.0,1.0], [-2.0,-3.0,1.0], [-4.0,-3.0,1.0],
-            [1.0,-4.0,1.0], [3.0,-4.0,1.0], [3.0,-3.0,1.0], [1.0,-3.0,1.0]
+            [-2.0, -2.0, 1.0], [2.0, -2.0, 1.0], [2.0,2.0,1.0],[-2.0,2.0,1.0]
             ]
         self.color = [1.0, 1.0, 1.0]
         #Apuntador a Operaciones Matriciales
@@ -25,7 +19,7 @@ class Robot:
         self.pos = [0.0,0.0, 1.0]
         self.delta_dir = [1.0,0.0,0.0]
         self.theta = 0
-        self.scale = 5
+        self.scale = 4
         self.color = [1.0, 1.0, 1.0]
         self.remRotation = 0  
         self.delta_theta = 5
@@ -106,14 +100,9 @@ class Robot:
         pointsR = self.opera.mult_Points(pointsR)
         self.opera.pop()
         glColor3fv(self.color)
-
+        
         for i in range(4):
             self.Bresenham(pointsR[i], pointsR[(i + 1) % 4]) 
-
-        wheel_offsets = [4, 8, 12, 16]
-        for offset in wheel_offsets:
-            for i in range(4):
-                self.Bresenham(pointsR[offset + i], pointsR[offset + (i + 1) % 4])
 
         self.update()
 
