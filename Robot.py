@@ -42,6 +42,9 @@ class Robot:
     def setColor(self, r, g, b):
         self.color = [r, g, b]
         glColor3f(r, g, b)
+        
+    def setScale(self, num):
+        self.scale = num
     
     def Bresenham(self, p1, p2):
         #Trazado del punto inicial al punto final

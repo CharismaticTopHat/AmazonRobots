@@ -19,7 +19,7 @@ class Box:
         self.pos = [0.0,0.0, 1.0]
         self.delta_dir = [1.0,0.0,0.0]
         self.theta = 0
-        self.scale = 4
+        self.scale = 3
         self.color = [1.0, 1.0, 1.0]
         self.remRotation = 0  
         self.delta_theta = 5
@@ -36,6 +36,9 @@ class Box:
     def setColor(self, r, g, b):
         self.color = [r, g, b]
         glColor3f(r, g, b)
+        
+    def setScale(self, num):
+        self.scale = num
     
     def Bresenham(self, p1, p2):
         #Trazado del punto inicial al punto final
