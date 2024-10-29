@@ -15,7 +15,7 @@ right = 3π/2
 end
 
 @agent struct car(GridAgent{2})  # Cambiado a GridAgent para ser consistente con GridSpace
-    street::CarStatus = empty
+    capacity::CarStatus = empty
     orientation::Float64 = normal
 end
 
@@ -90,17 +90,24 @@ function agent_step!(agent::box, model)
 end
 
 function agent_step!(agent::car, model)
-    if agent.street == empty
-        # Lógica para cambiar el estado a 'full'
-        agent.street = full
-    elseif agent.street == full
-        # Lógica para cambiar el estado a 'empty'
-        agent.street = empty
+    # Determinar si hay cajas en el rango de detección
+    box_detected = false
+    for neighbor in nearby_agents(agent, model, 3.0)  # Usamos 3 como el rango de Manhattan
+        if isa(neighbor, box) && neighbor.status == waiting  # Verificar si el vecino es una caja que está esperando
+            box_detected = true
+            break  # Si encontramos una caja, podemos salir del bucle
+        end
+    end
+    
+    # Si no se detectaron cajas, mover el carro hacia arriba (disminuir Y en 1)
+    if !box_detected
+        new_position = (agent.pos[1], agent.pos[2] - 1)
+        move_agent!(agent, new_position, model)  # Mover el carro hacia la nueva posición
     end
 end
 
 function initialize_model(; number = 40, griddims = (80, 80))
-    space = GridSpaceSingle(griddims; periodic = false, metric = :manhattan)
+    space = GridSpace(griddims; periodic = false, metric = :manhattan)
     model = StandardABM(Union{car, box}, space; agent_step!, scheduler = Schedulers.fastest)
     
     all_positions = [(x, y) for x in 1:griddims[1], y in 1:griddims[2]]
