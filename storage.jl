@@ -19,13 +19,26 @@ end
     orientation::Float64 = normal
 end
 
-function find_agent_in_position(pos, model)
-    for agent in allagents(model)
-        if agent.pos == pos
-            return agent
+# Función para encontrar la caja más cercana en un rango de 3x3 usando la distancia Manhattan
+function closest_box_nearby(agent::car, model)
+    closest_box = nothing
+    min_distance = Inf
+
+    # Buscar cajas dentro de un rango de 3x3
+    for neighbor in nearby_agents(agent, model, 3.0)
+        if isa(neighbor, Box)  # Solo considerar cajas
+            # Calcular la distancia Manhattan
+            dist_to_neighbor = abs(neighbor.pos[1] - agent.pos[1]) + abs(neighbor.pos[2] - agent.pos[2])
+
+            # Si la distancia está dentro del rango 3x3, seleccionar la caja más cercana
+            if dist_to_neighbor <= 3 && dist_to_neighbor < min_distance
+                min_distance = dist_to_neighbor
+                closest_box = neighbor
+            end
         end
     end
-    return nothing
+
+    return closest_box, min_distance
 end
 
 function agent_step!(agent::box, model)
@@ -93,25 +106,16 @@ function initialize_model(; number = 40, griddims = (80, 80))
     all_positions = [(x, y) for x in 1:griddims[1], y in 1:griddims[2]]
     shuffled_positions = shuffle(all_positions)
     
-    # Calcular posiciones para los autos proporcionalmente al tamaño del grid
-    top_y = 1  # Línea superior
-    bottom_y = griddims[2]  # Línea inferior
-
-    # Posiciones de los autos
-    car_positions = [
-        (round(Int, griddims[1] * 0.25), top_y),   # Auto 1 superior
-        (round(Int, griddims[1] * 0.75), top_y),   # Auto 2 superior
-        (round(Int, griddims[1] * 0.15), bottom_y), # Auto 1 inferior
-        (round(Int, griddims[1] * 0.50), bottom_y), # Auto 2 inferior
-        (round(Int, griddims[1] * 0.85), bottom_y)  # Auto 3 inferior
-    ]
+    num_cars = 5
+    bottom_y = griddims[2]  # Última fila (inferior)
+    initial_position = div(griddims[1], 10) 
+    spacing = 2 * initial_position
     
-    # Agregar los autos al modelo
+    car_columns = [initial_position + (i-1) * spacing for i in 1:num_cars]
+    car_positions = [(col, bottom_y) for col in car_columns]
     for car_pos in car_positions
         add_agent!(car, model; pos = car_pos)
     end
-    
-    # Lista de posiciones restringidas (ocupadas por autos o sus vecinos)
     restricted_positions = []
     for car_pos in car_positions
         append!(restricted_positions, [(car_pos[1] + dx, car_pos[2] + dy) for dx in -1:1, dy in -1:1])
