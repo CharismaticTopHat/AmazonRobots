@@ -24,18 +24,18 @@ end
 end
 
 
-# Función para encontrar la caja más cercana en un rango de 3x3 usando la distancia Manhattan
+# Function to find the closest box using Manhattan distance
 function closest_box_nearby(agent::car, model)
     closest_box = nothing
     min_distance = Inf
 
-    # Search for boxes within a 3x3 range
-    for neighbor in nearby_agents(agent, model, 3.0)
+    # Search for boxes within the entire grid space (expand the search range)
+    for neighbor in allagents(model)
         if isa(neighbor, box) && neighbor.status == waiting  # Only consider waiting boxes
             # Calculate the Manhattan distance
             dist_to_neighbor = abs(neighbor.pos[1] - agent.pos[1]) + abs(neighbor.pos[2] - agent.pos[2])
 
-            # Select the closest box within the range
+            # Select the closest box
             if dist_to_neighbor < min_distance
                 min_distance = dist_to_neighbor
                 closest_box = neighbor
@@ -54,29 +54,88 @@ function agent_step!(agent::storage, model)
     # No action needed for storage agents
 end
 
+# Function to find the closest storage using Manhattan distance
+function closest_storage_nearby(agent::car, model)
+    closest_storage = nothing
+    min_distance = Inf
+
+    # Search for storage agents within the entire grid space (expand the search range)
+    for neighbor in allagents(model)
+        if isa(neighbor, storage)  # Only consider storage agents
+            # Calculate the Manhattan distance
+            dist_to_neighbor = abs(neighbor.pos[1] - agent.pos[1]) + abs(neighbor.pos[2] - agent.pos[2])
+
+            # Select the closest storage
+            if dist_to_neighbor < min_distance
+                min_distance = dist_to_neighbor
+                closest_storage = neighbor
+            end
+        end
+    end
+
+    return closest_storage, min_distance
+end
+
 
 function agent_step!(agent::car, model)
-    closest_box, _ = closest_box_nearby(agent, model)
+    if agent.capacity == empty
+        closest_box, _ = closest_box_nearby(agent, model)
 
-    if closest_box !== nothing
-        target_pos = closest_box.pos
-        current_pos = agent.pos
+        if closest_box !== nothing
+            target_pos = closest_box.pos
+            current_pos = agent.pos
 
-        diff_x = target_pos[1] - current_pos[1]
-        diff_y = target_pos[2] - current_pos[2]
+            diff_x = target_pos[1] - current_pos[1]
+            diff_y = target_pos[2] - current_pos[2]
 
-        if abs(diff_x) > abs(diff_y)
-            new_position = (current_pos[1] + sign(diff_x), current_pos[2])
-        elseif abs(diff_y) > 0
-            new_position = (current_pos[1], current_pos[2] + sign(diff_y))
+            if abs(diff_x) > abs(diff_y)
+                new_position = (current_pos[1] + sign(diff_x), current_pos[2])
+            else
+                new_position = (current_pos[1], current_pos[2] + sign(diff_y))
+            end
+
+            move_agent!(agent, new_position, model)
+
+            if agent.pos == closest_box.pos
+                closest_box.status = taken
+                agent.capacity = full 
+                println("Car picked up the box at position $(closest_box.pos), now searching for storage")
+            end
         else
-            new_position = (current_pos[1], current_pos[2])
+            new_position = (agent.pos[1], agent.pos[2] - 1)
+            move_agent!(agent, new_position, model)
+            println("No box found, moving randomly to position $new_position")
         end
 
-        move_agent!(agent, new_position, model)
-    else
-        new_position = (agent.pos[1], agent.pos[2] - 1)
-        move_agent!(agent, new_position, model)
+    elseif agent.capacity == full
+        closest_storage, _ = closest_storage_nearby(agent, model)
+
+        if closest_storage !== nothing
+            target_pos = closest_storage.pos
+            current_pos = agent.pos
+
+            diff_x = target_pos[1] - current_pos[1]
+            diff_y = target_pos[2] - current_pos[2]
+
+            if abs(diff_x) > abs(diff_y)
+                new_position = (current_pos[1] + sign(diff_x), current_pos[2])
+            else
+                new_position = (current_pos[1], current_pos[2] + sign(diff_y))
+            end
+
+            move_agent!(agent, new_position, model)
+            println("Car moving to storage at position $(closest_storage.pos)")
+
+            if agent.pos == closest_storage.pos
+                agent.capacity = empty
+                closest_storage.boxes += 1
+                println("Car delivered the box to storage at position $(closest_storage.pos), now searching for new box")
+            end
+        else
+            new_position = (agent.pos[1], agent.pos[2] - 1)
+            move_agent!(agent, new_position, model)
+            println("No storage found, moving randomly to position $new_position")
+        end
     end
 end
 
