@@ -90,24 +90,23 @@ function agent_step!(agent::box, model)
 end
 
 function agent_step!(agent::car, model)
-    # Use the closest_box_nearby function to find the nearest box in range
     closest_box, _ = closest_box_nearby(agent, model)
 
-    # If a box is found within the range, move towards it
     if closest_box !== nothing
-        # Determine the step needed to move closer to the closest box
         target_pos = closest_box.pos
         current_pos = agent.pos
-        step_x = sign(target_pos[1] - current_pos[1])
-        step_y = sign(target_pos[2] - current_pos[2])
-        
-        # New position after moving one step closer to the box
-        new_position = (current_pos[1] + step_x, current_pos[2] + step_y)
-        
-        # Move the car agent towards the closest box
+
+        diff_x = target_pos[1] - current_pos[1]
+        diff_y = target_pos[2] - current_pos[2]
+
+        if abs(diff_x) > abs(diff_y)
+            new_position = (current_pos[1] + sign(diff_x), current_pos[2])
+        elseif abs(diff_y) > 0
+            new_position = (current_pos[1], current_pos[2] + sign(diff_y))
+        end
+
         move_agent!(agent, new_position, model)
     else
-        # If no box is detected in range, move the car upwards (decrease Y by 1)
         new_position = (agent.pos[1], agent.pos[2] - 1)
         move_agent!(agent, new_position, model)
     end
