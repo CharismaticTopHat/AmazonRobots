@@ -46,10 +46,10 @@ def Axis():
     
 def display():
     r1.setColor(1.0,1.0,1.0)
-    r1.setScale(10)
+    r1.setScale(5)
     r1.render()
     b1.setColor(1.0,1.0,0.0)
-    b1.setScale(20)
+    b1.setScale(5)
     b1.render()
         
 opera.loadId()

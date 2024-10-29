@@ -24,14 +24,14 @@ function closest_box_nearby(agent::car, model)
     closest_box = nothing
     min_distance = Inf
 
-    # Buscar cajas dentro de un rango de 3x3
+    # Search for boxes within a 3x3 range
     for neighbor in nearby_agents(agent, model, 3.0)
-        if isa(neighbor, Box)  # Solo considerar cajas
-            # Calcular la distancia Manhattan
+        if isa(neighbor, box) && neighbor.status == waiting  # Only consider waiting boxes
+            # Calculate the Manhattan distance
             dist_to_neighbor = abs(neighbor.pos[1] - agent.pos[1]) + abs(neighbor.pos[2] - agent.pos[2])
 
-            # Si la distancia está dentro del rango 3x3, seleccionar la caja más cercana
-            if dist_to_neighbor <= 3 && dist_to_neighbor < min_distance
+            # Select the closest box within the range
+            if dist_to_neighbor < min_distance
                 min_distance = dist_to_neighbor
                 closest_box = neighbor
             end
@@ -90,25 +90,33 @@ function agent_step!(agent::box, model)
 end
 
 function agent_step!(agent::car, model)
-    # Determinar si hay cajas en el rango de detección
-    box_detected = false
-    for neighbor in nearby_agents(agent, model, 3.0)  # Usamos 3 como el rango de Manhattan
-        if isa(neighbor, box) && neighbor.status == waiting  # Verificar si el vecino es una caja que está esperando
-            box_detected = true
-            break  # Si encontramos una caja, podemos salir del bucle
-        end
-    end
-    
-    # Si no se detectaron cajas, mover el carro hacia arriba (disminuir Y en 1)
-    if !box_detected
+    # Use the closest_box_nearby function to find the nearest box in range
+    closest_box, _ = closest_box_nearby(agent, model)
+
+    # If a box is found within the range, move towards it
+    if closest_box !== nothing
+        # Determine the step needed to move closer to the closest box
+        target_pos = closest_box.pos
+        current_pos = agent.pos
+        step_x = sign(target_pos[1] - current_pos[1])
+        step_y = sign(target_pos[2] - current_pos[2])
+        
+        # New position after moving one step closer to the box
+        new_position = (current_pos[1] + step_x, current_pos[2] + step_y)
+        
+        # Move the car agent towards the closest box
+        move_agent!(agent, new_position, model)
+    else
+        # If no box is detected in range, move the car upwards (decrease Y by 1)
         new_position = (agent.pos[1], agent.pos[2] - 1)
-        move_agent!(agent, new_position, model)  # Mover el carro hacia la nueva posición
+        move_agent!(agent, new_position, model)
     end
 end
 
 function initialize_model(; number = 40, griddims = (80, 80))
     space = GridSpace(griddims; periodic = false, metric = :manhattan)
     model = StandardABM(Union{car, box}, space; agent_step!, scheduler = Schedulers.fastest)
+    matrix = fill(1, griddims...)
     
     all_positions = [(x, y) for x in 1:griddims[1], y in 1:griddims[2]]
     shuffled_positions = shuffle(all_positions)
