@@ -16,15 +16,18 @@ route("/simulations", method = POST) do
 
     boxes = []
     cars = []
+    storages = []
     for agent in allagents(model)
         if agent isa box
             push!(boxes, agent)
         elseif agent isa car
             push!(cars, agent)
+        elseif agent isa storage
+            push!(storages, agent)
         end
     end
     
-    json(Dict(:msg => "Hola", "Location" => "/simulations/$id", "boxes" => boxes, "cars" => cars))
+    json(Dict(:msg => "Hola", "Location" => "/simulations/$id", "boxes" => boxes, "cars" => cars, "storages" => storages))
 end
 
 route("/simulations/:id") do
@@ -35,15 +38,18 @@ route("/simulations/:id") do
 
     boxes = []
     cars = []
+    storages = []
     for agent in allagents(model)
         if agent isa box
             push!(boxes, agent)
         elseif agent isa car
             push!(cars, agent)
+        elseif agent isa storage
+            push!(storages, agent)
         end
     end
     
-    json(Dict(:msg => "Adios", "boxes" => boxes, "cars" => cars))
+    json(Dict(:msg => "Adios", "boxes" => boxes, "cars" => cars, "storages" => storages))
 end
 
 Genie.config.run_as_server = true

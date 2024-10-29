@@ -10,6 +10,7 @@
     let [simSpeed,setSimSpeed] = useState(2);
     let [boxes, setBoxes] = useState([]);
     let [cars, setCars] = useState([]);
+    let [storages, setStorages] = useState([]);
     let [iterations, setIterations] = useState(0);
     let [burntPerc, setBurntPerc] = useState(0);
     let [number, setNumber] = useState(40);
@@ -40,6 +41,7 @@
         setLocation(data["Location"]);
         setBoxes(data["boxes"]);
         setCars(data["cars"]);
+        setStorages(data["storages"]);
         setIterations(0);
         setBurntPerc(0);
       });
@@ -55,6 +57,7 @@
           burntBoxes.current.push(burnt);
           setBoxes(data["boxes"]);
           setCars(data["cars"]);
+          setStorages(data["storages"]);
           setIterations(prev => prev + 1);
           setBurntPerc((burnt * 100).toFixed(2));
         });
@@ -141,6 +144,18 @@
         width={sizing}  // Tamaño de la imagen ajustado al tamaño de la celda
         height={sizing} // Alto ajustado al tamaño de la celda
         href={"./vite.svg"} // Ruta a la imagen
+      />
+    ))
+  }
+  {
+    storages.map(storage => (
+      <image
+        key={storage["id"]}
+        x={(storage["pos"][0] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
+        y={(storage["pos"][1] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
+        width={sizing}  // Tamaño de la imagen ajustado al tamaño de la celda
+        height={sizing} // Alto ajustado al tamaño de la celda
+        href={"./greentree.svg"} // Ruta a la imagen
       />
     ))
   }
