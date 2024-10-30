@@ -21,9 +21,28 @@ from OpMat import OpMat
 from Robot import Robot
 from Box import Box
 
+import requests
+
+URL_BASE = "http://localhost:8000"
+r = requests.post(URL_BASE+ "/simulations", allow_redirects=False)
+datos = r.json()
+print(datos)
+LOCATION = datos["Location"]
+cars = datos["\"cars\""]
+boxes = datos["boxes"]
+
 opera = OpMat()
-r1 = Robot(opera)
-b1 = Box(opera)
+
+robots = []
+packages = []
+
+for car in cars: 
+    robot = Robot(opera)
+    robots.append(robot)
+    
+for box in boxes:
+    package = Box(opera)
+    packages.append(package)
 
 pygame.init()
 
@@ -45,12 +64,23 @@ def Axis():
     glLineWidth(1.0)
     
 def display():
-    r1.setColor(1.0,1.0,1.0)
-    r1.setScale(5)
-    r1.render()
-    b1.setColor(1.0,1.0,0.0)
-    b1.setScale(5)
-    b1.render()
+    for robot in robots:
+        robot.setColor(1.0,1.0,1.0)
+        robot.setScale(5)
+        robot.render()
+        response = requests.get(URL_BASE + LOCATION)
+        datos = response.json()
+        Rbts = datos["cars"]
+        robot.translate(Rbts["pos"][0], Rbts["pos"][1])
+    
+    for package in packages:
+        package.setColor(1.0,1.0,0.0)
+        package.setScale(5)
+        package.render()
+        response = requests.get(URL_BASE + LOCATION)
+        datos = response.json()
+        Bxs = datos["boxes"]
+        package.translate(Bxs["pos"][0], Bxs["pos"][1])  
         
 opera.loadId()
 
@@ -79,13 +109,17 @@ while not done:
         if event.type == pygame.QUIT:
             done = True
         if keys[pygame.K_UP]:
-            r1.moveUp()
+            pass
+            #r1.moveUp()
         if keys[pygame.K_DOWN]:
-            r1.moveDown()
+            pass
+            #r1.moveDown()
         if keys[pygame.K_LEFT]:
-            r1.turnLeft()
+            pass
+            #r1.turnLeft()
         if keys[pygame.K_RIGHT]:
-            r1.turnRight()
+            pass
+            #r1.turnRight()
     glClear(GL_COLOR_BUFFER_BIT)
     Axis()
     display()  

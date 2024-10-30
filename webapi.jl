@@ -27,7 +27,7 @@ route("/simulations", method = POST) do
         end
     end
     
-    json(Dict(:msg => "Hola", "Location" => "/simulations/$id", "boxes" => boxes, "cars" => cars, "storages" => storages))
+    json(Dict("Location" => "/simulations/$id", "boxes" => boxes, "cars" => cars, "storages" => storages))
 end
 
 route("/simulations/:id") do
@@ -49,7 +49,7 @@ route("/simulations/:id") do
         end
     end
     
-    json(Dict(:msg => "Adios", "boxes" => boxes, "cars" => cars, "storages" => storages))
+    json(Dict("boxes" => boxes, "cars" => cars, "storages" => storages))
 end
 
 Genie.config.run_as_server = true
