@@ -15,6 +15,8 @@ X_MIN=-500
 X_MAX=500
 Y_MIN=-500
 Y_MAX=500
+#Dimension del Plano
+DimBoard = 200
 
 # Archivos propios
 from OpMat import OpMat
@@ -28,21 +30,44 @@ r = requests.post(URL_BASE+ "/simulations", allow_redirects=False)
 datos = r.json()
 print(datos)
 LOCATION = datos["Location"]
-cars = datos["\"cars\""]
+
+coordsCars = []
+coordsBoxes = []
+coordsStorages = []
+
+cars = datos["cars"]
+for car in cars:
+    coordsCars.append([datos["cars"][car]["pos"][0]], datos["cars"][car]["pos"][1])
+
 boxes = datos["boxes"]
+for box in boxes:
+    coordsBoxes.append([datos["boxes"][box]["pos"][0]], datos["boxes"][box]["pos"][1])
+    
+storages = datos["storages"]
+for storage in storages:
+    coordsStorages.append([datos["storages"][storage], datos["storages"][storage]["pos"][1]])
+    
 
 opera = OpMat()
 
 robots = []
 packages = []
+boxPiles = []
 
 for car in cars: 
-    robot = Robot(opera)
-    robots.append(robot)
+    num = str(car)
+    r = Robot(opera)
+    robots.append(r+num)
     
 for box in boxes:
-    package = Box(opera)
-    packages.append(package)
+    num = str(box)
+    b = Box(opera)
+    packages.append(b+num)
+
+for storage in storages:
+    num = str(storage)
+    s = Box(opera)
+    boxPiles.append(s.num)
 
 pygame.init()
 
@@ -64,9 +89,19 @@ def Axis():
     glLineWidth(1.0)
     
 def display():
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    #Se dibuja el plano gris
+    glColor3f(0.3, 0.3, 0.3)
+    glBegin(GL_QUADS)
+    glVertex3d(-DimBoard, 0, -DimBoard)
+    glVertex3d(-DimBoard, 0, DimBoard)
+    glVertex3d(DimBoard, 0, DimBoard)
+    glVertex3d(DimBoard, 0, -DimBoard)
+    glEnd()
+    
     for robot in robots:
         robot.setColor(1.0,1.0,1.0)
-        robot.setScale(5)
+        robot.setScale(2)
         robot.render()
         response = requests.get(URL_BASE + LOCATION)
         datos = response.json()
@@ -75,7 +110,7 @@ def display():
     
     for package in packages:
         package.setColor(1.0,1.0,0.0)
-        package.setScale(5)
+        package.setScale(2)
         package.render()
         response = requests.get(URL_BASE + LOCATION)
         datos = response.json()
