@@ -30,46 +30,14 @@ r = requests.post(URL_BASE+ "/simulations", allow_redirects=False)
 datos = r.json()
 print(datos)
 LOCATION = datos["Location"]
-
-coordsCars = []
-coordsBoxes = []
-coordsStorages = []
-
-cars = datos["cars"]
-for car in cars:
-    coordsCars.append([datos["cars"][car]["pos"][0]], datos["cars"][car]["pos"][1])
-
-boxes = datos["boxes"]
-for box in boxes:
-    coordsBoxes.append([datos["boxes"][box]["pos"][0]], datos["boxes"][box]["pos"][1])
-    
-storages = datos["storages"]
-for storage in storages:
-    coordsStorages.append([datos["storages"][storage], datos["storages"][storage]["pos"][1]])
-    
-
-opera = OpMat()
-
-robots = []
-packages = []
-boxPiles = []
-
-for car in cars: 
-    num = str(car)
-    r = Robot(opera)
-    robots.append(r+num)
-    
-for box in boxes:
-    num = str(box)
-    b = Box(opera)
-    packages.append(b+num)
-
-for storage in storages:
-    num = str(storage)
-    s = Box(opera)
-    boxPiles.append(s.num)
+initialX = datos["cars"][0]["pos"][0]
+initialY = datos["cars"][0]["pos"][1]
 
 pygame.init()
+
+opera = OpMat()
+r1 = Robot(opera)
+
 
 def Axis():
     glShadeModel(GL_FLAT)
@@ -90,7 +58,6 @@ def Axis():
     
 def display():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    #Se dibuja el plano gris
     glColor3f(0.3, 0.3, 0.3)
     glBegin(GL_QUADS)
     glVertex3d(-DimBoard, 0, -DimBoard)
@@ -99,30 +66,21 @@ def display():
     glVertex3d(DimBoard, 0, -DimBoard)
     glEnd()
     
-    for robot in robots:
-        robot.setColor(1.0,1.0,1.0)
-        robot.setScale(2)
-        robot.render()
-        response = requests.get(URL_BASE + LOCATION)
-        datos = response.json()
-        Rbts = datos["cars"]
-        robot.translate(Rbts["pos"][0], Rbts["pos"][1])
-    
-    for package in packages:
-        package.setColor(1.0,1.0,0.0)
-        package.setScale(2)
-        package.render()
-        response = requests.get(URL_BASE + LOCATION)
-        datos = response.json()
-        Bxs = datos["boxes"]
-        package.translate(Bxs["pos"][0], Bxs["pos"][1])  
+    r1.setColor(1.0,1.0,1.0)
+    r1.setScale(5)
+    r1.render()
+
+    response = requests.get(URL_BASE + LOCATION)
+    datos = response.json()
+    robot = datos["cars"][0]
+    r1.opera.translate(robot["pos"][0], robot["pos"][1])
         
 opera.loadId()
 
 def init():
     screen = pygame.display.set_mode(
         (screen_width, screen_height), DOUBLEBUF | OPENGL)
-    pygame.display.set_caption("OpenGL: Triángulos")
+    pygame.display.set_caption("OpenGL: Amazon Robots")
 
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
