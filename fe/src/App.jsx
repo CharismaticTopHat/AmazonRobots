@@ -1,169 +1,198 @@
-  import { Button, ButtonGroup, CheckboxField, SliderField, SwitchField } from '@aws-amplify/ui-react';
-  import { useRef, useState } from 'react'
+import { Button, ButtonGroup, CheckboxField, SliderField, SwitchField } from '@aws-amplify/ui-react';
+import { useRef, useState } from 'react';
 
-  import '@aws-amplify/ui-react/styles.css';
+import '@aws-amplify/ui-react/styles.css';
 
-  function App() {
-    let [location, setLocation] = useState("");
-    let [gridSize, setGridSize] = useState(80);
-    let [probability_of_spread, setProbability] = useState(100);
-    let [simSpeed,setSimSpeed] = useState(2);
-    let [boxes, setBoxes] = useState([]);
-    let [cars, setCars] = useState([]);
-    let [storages, setStorages] = useState([]);
-    let [iterations, setIterations] = useState(0);
-    let [developedPerc, setDevelopedPerc] = useState(0);
-    let [number, setNumber] = useState(40);
-    let [sliderGridSize, setSliderGridSize] = useState(80);
-    let [south_wind_speed, setSouthWindSpeed] = useState(0);
-    let [west_wind_speed, setWestWindSpeed] = useState(0);
-    let [bigJumps, setBigJumps] = useState(false);
+function App() {
+  const [location, setLocation] = useState("");
+  const [gridSize, setGridSize] = useState(80);
+  const [probability_of_spread, setProbability] = useState(100);
+  const [button, setButton] = useState(false); // Estado para manejar el botón de Setup
+  const [simSpeed, setSimSpeed] = useState(2);
+  const [boxes, setBoxes] = useState([]);
+  const [cars, setCars] = useState([]);
+  const [storages, setStorages] = useState([]);
+  const [iterations, setIterations] = useState(0);
+  const [deliveredPerc, setDeliveredPerc] = useState(0);
+  const [number, setNumber] = useState(40);
+  const [sliderGridSize, setSliderGridSize] = useState(80);
+  const [south_wind_speed, setSouthWindSpeed] = useState(0);
+  const [west_wind_speed, setWestWindSpeed] = useState(0);
+  const [bigJumps, setBigJumps] = useState(false);
+  const [showGrid, setShowGrid] = useState(false); // New state for grid visibility
 
-    const developedBoxes = useRef(null);
-    const sizing = 12.5;
-    const running = useRef(null);
+  const deliveredBoxes = useRef(null);
+  const sizing = 12.5;
+  const running = useRef(null);
 
-    let setup = () => {
-      setGridSize(sliderGridSize);
-      fetch("http://localhost:8000/simulations", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          dim: [sliderGridSize, sliderGridSize],
-          probability_of_spread: probability_of_spread,
-          number: number,
-          south_wind_speed: south_wind_speed,
-          west_wind_speed: west_wind_speed,
-          bigJumps: bigJumps
-        })
-      }).then(resp => resp.json())
+  // Define the orientation to angle mapping
+  const orientationToAngle = {
+    0: 0,   // Up
+    1: -90,   // Left
+    2: 180,    // Down
+    3: 90      // Right
+  };
+
+  const setup = () => {
+    setGridSize(sliderGridSize);
+    fetch("http://localhost:8000/simulations", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        dim: [sliderGridSize, sliderGridSize],
+        probability_of_spread: probability_of_spread,
+        number: number,
+        south_wind_speed: south_wind_speed,
+        west_wind_speed: west_wind_speed,
+        bigJumps: bigJumps
+      })
+    }).then(resp => resp.json())
+    .then(data => {
+      setLocation(data["Location"]);
+      setBoxes(data["boxes"]);
+      setCars(data["cars"]);
+      setStorages(data["storages"]);
+      setIterations(0);
+      setDeliveredPerc(0);
+    });
+  };
+
+  const handleStart = () => {
+    deliveredBoxes.current = [];
+    setButton(true);
+    running.current = setInterval(() => {
+      fetch("http://localhost:8000" + location)
+      .then(res => res.json())
       .then(data => {
-        setLocation(data["Location"]);
+        let delivered = data["boxes"].filter(b => b.status === "delivered").length;
+        deliveredBoxes.current.push(delivered);
         setBoxes(data["boxes"]);
         setCars(data["cars"]);
         setStorages(data["storages"]);
-        setIterations(0);
-        setDevelopedPerc(0);
+        setIterations(prev => prev + 1);
+        setDeliveredPerc((number - delivered));
       });
-    }
+    }, 300 / simSpeed);
+  };
 
-    let handleStart = () => {
-      developedBoxes.current = [];
-      running.current = setInterval(() => {
-        fetch("http://localhost:8000" + location)
-        .then(res => res.json())
-        .then(data => {
-          let developed = data["boxes"].filter(b => b.status == "developed").length;
-          developedBoxes.current.push(developed);
-          setBoxes(data["boxes"]);
-          setCars(data["cars"]);
-          setStorages(data["storages"]);
-          setIterations(prev => prev + 1);
-          setDevelopedPerc((number - developed));
-        });
-        }, 300 / simSpeed);
-    };
+  const handleStop = () => {
+    setButton(false);
+    clearInterval(running.current);
+  };
 
-    let handleStop = () => {
-      clearInterval(running.current);
-    };
-    let offset = ((sizing*sliderGridSize) - gridSize * 12) / 2;
+  const offset = ((sizing * sliderGridSize) - gridSize * 12) / 2;
 
-    return (
-      <>
-        <ButtonGroup variation="primary">
-          <Button onClick={setup}>Setup</Button>
-          <Button onClick={handleStart}>Start</Button>
-          <Button onClick={handleStop}>Stop</Button>
-        </ButtonGroup>
+  return (
+    <>
+      <ButtonGroup variation="primary">
+        <Button onClick={setup} isDisabled={button}>Setup</Button>
+        <Button onClick={handleStart} isDisabled={button}>Start</Button>
+        <Button onClick={handleStop} isDisabled={!button}>Stop</Button>
+      </ButtonGroup>
 
-        <SliderField label="Grid size" min={40} max={80} step={10}
-          value={sliderGridSize} onChange={setSliderGridSize} />
-        <SliderField label="Simulation speed" min={1} max={30}
-          value={simSpeed} onChange={setSimSpeed} />
-        <SliderField label="Spread Probability" min={0} max={100} step={1}
-          value={probability_of_spread} onChange={setProbability} />
-        <SliderField label="Number" min={10} max={100} step={10}
-          value={number} onChange={setNumber} />
-        <SliderField label="South-North Wind" min={-50} max={50} step={1}
-          value={south_wind_speed} onChange={setSouthWindSpeed} />
-        <SliderField label="West-East Wind" min={-50} max={50} step={1}
-          value={west_wind_speed} onChange={setWestWindSpeed} />
-        <SwitchField label="Big Jump"
-          checked={bigJumps} onChange={(e) => setBigJumps(e.target.checked)} />
-        <p>Iterations: {iterations}</p> 
-        <p>Developed boxes: {developedPerc}</p>
-        
-        <svg width={sizing * sliderGridSize} height={sizing * sliderGridSize} xmlns="http://www.w3.org/2000/svg" style={{backgroundColor:"white"}}>
-  {
-    // Líneas horizontales
-    Array.from({ length: sliderGridSize + 1 }).map((_, i) => (
-      <line
-        key={`h-line-${i}`}
-        x1={0}
-        y1={i * sizing}
-        x2={sizing * sliderGridSize}
-        y2={i * sizing}
-        stroke="black"
-        strokeWidth="0.5"
-      />
-    ))
-  }
-  {
-    // Líneas verticales
-    Array.from({ length: sliderGridSize + 1 }).map((_, i) => (
-      <line
-        key={`v-line-${i}`}
-        x1={i * sizing}
-        y1={0}
-        x2={i * sizing}
-        y2={sizing * sliderGridSize}
-        stroke="black"
-        strokeWidth="0.5"
-      />
-    ))
-  }
-  {
-    boxes.map(box => (
-      <image
-        key={box["id"]}
-        x={(box["pos"][0] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
-        y={(box["pos"][1] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
-        width={sizing}  // Tamaño de la imagen ajustado al tamaño de la celda
-        height={sizing} // Alto ajustado al tamaño de la celda
-        href={"./caja.png"} // Ruta a la imagen
-      />
-    ))
-  }
-  {
-    cars.map(car => (
-      <image
-        key={car["id"]}
-        x={(car["pos"][0] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
-        y={(car["pos"][1] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
-        width={sizing}  // Tamaño de la imagen ajustado al tamaño de la celda
-        height={sizing} // Alto ajustado al tamaño de la celda
-        href={"./vite.svg"} // Ruta a la imagen
-      />
-    ))
-  }
-  {
-    storages.map(storage => (
-      <image
-        key={storage["id"]}
-        x={(storage["pos"][0] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
-        y={(storage["pos"][1] - 1) * sizing} // Ajuste para que las posiciones inicien desde el borde
-        width={sizing}  // Tamaño de la imagen ajustado al tamaño de la celda
-        height={sizing} // Alto ajustado al tamaño de la celda
-        href={"./greentree.svg"} // Ruta a la imagen
-      />
-    ))
-  }
-</svg>
+      <SliderField label="Grid size" min={40} max={80} step={10}
+        value={sliderGridSize} onChange={setSliderGridSize} />
+      <SliderField label="Simulation speed" min={1} max={30}
+        value={simSpeed} onChange={setSimSpeed} />
+      <SliderField label="Number of Boxes" min={10} max={100} step={10}
+        value={number} onChange={setNumber} />
 
+      {/* Add SwitchField to control grid visibility */}
+      <SwitchField label="Show Grid" 
+        checked={showGrid} isDisabled={button} onChange={(e) => setShowGrid(e.target.checked)} />
 
-      </>
-    )
-  }
+      <p>Iterations: {iterations}</p> 
+      <p>Boxes Missing of Delivery: {deliveredPerc}</p>
+      
+      <svg width={sizing * sliderGridSize} height={sizing * sliderGridSize} xmlns="http://www.w3.org/2000/svg" style={{backgroundColor:"white"}}>
+        {
+          // Conditionally render horizontal and vertical lines for the grid
+          showGrid && (
+            <>
+              {
+                // Horizontal lines
+                Array.from({ length: sliderGridSize + 1 }).map((_, i) => (
+                  <line
+                    key={`h-line-${i}`}
+                    x1={0}
+                    y1={i * sizing}
+                    x2={sizing * sliderGridSize}
+                    y2={i * sizing}
+                    stroke="black"
+                    strokeWidth="0.5"
+                  />
+                ))
+              }
+              {
+                // Vertical lines
+                Array.from({ length: sliderGridSize + 1 }).map((_, i) => (
+                  <line
+                    key={`v-line-${i}`}
+                    x1={i * sizing}
+                    y1={0}
+                    x2={i * sizing}
+                    y2={sizing * sliderGridSize}
+                    stroke="black"
+                    strokeWidth="0.5"
+                  />
+                ))
+              }
+            </>
+          )
+        }
+        {
+          boxes.map(box => (
+            <image
+              key={box.id}
+              x={(box.pos[0] - 1) * sizing} // Adjust to start from the edge
+              y={(box.pos[1] - 1) * sizing} // Adjust to start from the edge
+              width={sizing}  
+              height={sizing} 
+              href={"./caja.png"} // Path to box image
+            />
+          ))
+        }
+        {
+          cars.map(car => {
+            // Calculate rotation angle
+            const angle = orientationToAngle[car.orientation] || 0;
 
-  export default App
+            // Calculate position
+            const xPos = (car.pos[0] - 1) * sizing;
+            const yPos = (car.pos[1] - 1) * sizing;
+
+            // Calculate center for rotation
+            const centerX = xPos + sizing / 2;
+            const centerY = yPos + sizing / 2;
+
+            return (
+              <image
+                key={car.id}
+                x={xPos}
+                y={yPos}
+                width={sizing}
+                height={sizing}
+                href={"./vite.svg"} // Path to car image
+                transform={`rotate(${angle}, ${centerX}, ${centerY})`}
+              />
+            );
+          })
+        }
+        {
+          storages.map(storage => (
+            <image
+              key={storage.id}
+              x={(storage.pos[0] - 1) * sizing}
+              y={(storage.pos[1] - 1) * sizing}
+              width={sizing}
+              height={sizing}
+              href={"./greentree.svg"} // Path to storage image
+            />
+          ))
+        }
+      </svg>
+    </>
+  );
+}
+
+export default App;
