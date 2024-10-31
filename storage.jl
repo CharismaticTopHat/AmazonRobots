@@ -14,7 +14,7 @@ right = 3π/2
     status::BoxStatus = waiting
 end
 
-@agent struct car(GridAgent{2})  # Cambiado a GridAgent para ser consistente con GridSpace
+@agent struct car(GridAgent{2})
     capacity::CarStatus = empty
     orientation::Float64 = normal
 end
@@ -29,13 +29,10 @@ function closest_box_nearby(agent::car, model)
     closest_box = nothing
     min_distance = Inf
 
-    # Search for boxes within the entire grid space (expand the search range)
     for neighbor in allagents(model)
-        if isa(neighbor, box) && neighbor.status == waiting  # Only consider waiting boxes
-            # Calculate the Manhattan distance
+        if isa(neighbor, box) && neighbor.status == waiting
             dist_to_neighbor = abs(neighbor.pos[1] - agent.pos[1]) + abs(neighbor.pos[2] - agent.pos[2])
 
-            # Select the closest box
             if dist_to_neighbor < min_distance
                 min_distance = dist_to_neighbor
                 closest_box = neighbor
@@ -47,7 +44,7 @@ function closest_box_nearby(agent::car, model)
 end
 
 function agent_step!(agent::box, model)
-    # No action needed for storage agents
+    # No action needed for box agents
 end
 
 function agent_step!(agent::storage, model)
@@ -61,11 +58,9 @@ function closest_storage_nearby(agent::car, model)
 
     # Search for storage agents within the entire grid space (expand the search range)
     for neighbor in allagents(model)
-        if isa(neighbor, storage)  # Only consider storage agents
-            # Calculate the Manhattan distance
+        if isa(neighbor, storage)  
             dist_to_neighbor = abs(neighbor.pos[1] - agent.pos[1]) + abs(neighbor.pos[2] - agent.pos[2])
 
-            # Select the closest storage
             if dist_to_neighbor < min_distance
                 min_distance = dist_to_neighbor
                 closest_storage = neighbor
@@ -76,6 +71,51 @@ function closest_storage_nearby(agent::car, model)
     return closest_storage, min_distance
 end
 
+# Check if another car is already in the target position
+function detect_collision(agent::car, target_pos, model)
+
+    for neighbor in allagents(model)
+        if isa(neighbor, car) && neighbor !== agent
+            if neighbor.pos == target_pos
+                return true
+            end
+        end
+    end
+    return false
+end
+
+# Attempt to move to the new position if no collision is detected
+function try_move(agent::car, model, new_position)
+    if !detect_collision(agent, new_position, model)
+        move_agent!(agent, new_position, model)
+        println("Car moved to position $new_position")
+        return true 
+    else
+        println("Car detected another car at $new_position, avoiding collision")
+        return false
+    end
+end
+
+# Try moving randomly in one of the four cardinal directions
+function random_move(agent::car, model)
+    current_pos = agent.pos
+    possible_moves = [
+        (current_pos[1] + 1, current_pos[2]),
+        (current_pos[1] - 1, current_pos[2]),
+        (current_pos[1], current_pos[2] + 1),
+        (current_pos[1], current_pos[2] - 1)
+    ]
+    shuffle!(possible_moves)
+    for move in possible_moves
+        if !detect_collision(agent, move, model)
+            move_agent!(agent, move, model)
+            println("Car made a random move to $move")
+            return true
+        end
+    end
+    println("Car couldn't make a random move, staying in place")
+    return false
+end
 
 function agent_step!(agent::car, model)
     if agent.capacity == empty
@@ -88,29 +128,40 @@ function agent_step!(agent::car, model)
             diff_x = target_pos[1] - current_pos[1]
             diff_y = target_pos[2] - current_pos[2]
 
+            # Try to move in the primary direction (the axis with the larger distance)
             if abs(diff_x) > abs(diff_y)
                 new_position = (current_pos[1] + sign(diff_x), current_pos[2])
+                if !try_move(agent, model, new_position)  # If blocked, try the secondary direction
+                    new_position = (current_pos[1], current_pos[2] + sign(diff_y))
+                    if !try_move(agent, model, new_position)
+                        random_move(agent, model)  # Try random move if both directions are blocked
+                    end
+                end
             else
                 new_position = (current_pos[1], current_pos[2] + sign(diff_y))
+                if !try_move(agent, model, new_position)  # If blocked, try the primary direction
+                    new_position = (current_pos[1] + sign(diff_x), current_pos[2])
+                    if !try_move(agent, model, new_position)
+                        random_move(agent, model)  # Try random move if both directions are blocked
+                    end
+                end
             end
-
-            move_agent!(agent, new_position, model)
 
             if agent.pos == closest_box.pos
                 closest_box.status = taken
-                agent.capacity = full 
+                agent.capacity = full
                 println("Car picked up the box at position $(closest_box.pos), now searching for storage")
             end
         else
             new_position = (agent.pos[1], agent.pos[2] - 1)
-            move_agent!(agent, new_position, model)
-            println("No box found, moving randomly to position $new_position")
+            try_move(agent, model, new_position)
         end
 
     elseif agent.capacity == full
         closest_storage, _ = closest_storage_nearby(agent, model)
+        closest_box, _ = closest_box_nearby(agent, model)
 
-        if closest_storage !== nothing
+        if closest_storage !== nothing && closest_storage.boxes !== 0
             target_pos = closest_storage.pos
             current_pos = agent.pos
 
@@ -119,22 +170,32 @@ function agent_step!(agent::car, model)
 
             if abs(diff_x) > abs(diff_y)
                 new_position = (current_pos[1] + sign(diff_x), current_pos[2])
+                if !try_move(agent, model, new_position)
+                    new_position = (current_pos[1], current_pos[2] + sign(diff_y))
+                    if !try_move(agent, model, new_position)
+                        random_move(agent, model)
+                    end
+                end
             else
                 new_position = (current_pos[1], current_pos[2] + sign(diff_y))
+                if !try_move(agent, model, new_position)
+                    new_position = (current_pos[1] + sign(diff_x), current_pos[2])
+                    if !try_move(agent, model, new_position)
+                        random_move(agent, model)
+                    end
+                end
             end
-
-            move_agent!(agent, new_position, model)
-            println("Car moving to storage at position $(closest_storage.pos)")
 
             if agent.pos == closest_storage.pos
                 agent.capacity = empty
-                closest_storage.boxes += 1
+                closest_storage.boxes -= 1
                 println("Car delivered the box to storage at position $(closest_storage.pos), now searching for new box")
+                closest_box.status = developed
+                
             end
         else
             new_position = (agent.pos[1], agent.pos[2] - 1)
-            move_agent!(agent, new_position, model)
-            println("No storage found, moving randomly to position $new_position")
+            try_move(agent, model, new_position)
         end
     end
 end
@@ -148,7 +209,7 @@ function initialize_model(; number = 40, griddims = (80, 80))
     shuffled_positions = shuffle(all_positions)
     
     num_cars = 5
-    bottom_y = griddims[2]  # Last row (bottom)
+    bottom_y = griddims[2]
     initial_position = div(griddims[1], 10) 
     spacing = 2 * initial_position
     
@@ -173,10 +234,8 @@ function initialize_model(; number = 40, griddims = (80, 80))
         add_agent!(box, model; pos = valid_positions[i])
     end
     
-    # Calculate number of storage areas needed
     num_storages = round(Int, number / num_cars)
 
-    # Function to check if a box exists at a given position
     function box_at_position(pos, model)
         for agent in agents_in_position(pos, model)
             if isa(agent, box)
@@ -186,16 +245,14 @@ function initialize_model(; number = 40, griddims = (80, 80))
         return false
     end
 
-    # Place one storage area on each car's position, only if there's no box already there
     storage_positions = []
     for car_pos in car_positions
         if !box_at_position(car_pos, model)
-            add_agent!(storage, model; pos = car_pos)  # Example capacity
+            add_agent!(storage, model; pos = car_pos) 
             push!(storage_positions, car_pos)
         end
     end
 
-    # Add remaining storage areas at random border positions if no box is already present
     remaining_storages = num_storages - length(storage_positions)
     if remaining_storages > 0
         border_positions = [(x, 1) for x in 1:griddims[1]]  # Top border

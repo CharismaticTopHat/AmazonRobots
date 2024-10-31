@@ -12,14 +12,14 @@
     let [cars, setCars] = useState([]);
     let [storages, setStorages] = useState([]);
     let [iterations, setIterations] = useState(0);
-    let [burntPerc, setBurntPerc] = useState(0);
+    let [developedPerc, setDevelopedPerc] = useState(0);
     let [number, setNumber] = useState(40);
     let [sliderGridSize, setSliderGridSize] = useState(80);
     let [south_wind_speed, setSouthWindSpeed] = useState(0);
     let [west_wind_speed, setWestWindSpeed] = useState(0);
     let [bigJumps, setBigJumps] = useState(false);
 
-    const burntBoxes = useRef(null);
+    const developedBoxes = useRef(null);
     const sizing = 12.5;
     const running = useRef(null);
 
@@ -43,25 +43,25 @@
         setCars(data["cars"]);
         setStorages(data["storages"]);
         setIterations(0);
-        setBurntPerc(0);
+        setDevelopedPerc(0);
       });
     }
 
     let handleStart = () => {
-      burntBoxes.current = [];
+      developedBoxes.current = [];
       running.current = setInterval(() => {
         fetch("http://localhost:8000" + location)
         .then(res => res.json())
         .then(data => {
-          let burnt = data["boxes"].filter(b => b.status == "delivered").length / data["boxes"].length;
-          burntBoxes.current.push(burnt);
+          let developed = data["boxes"].filter(b => b.status == "developed").length;
+          developedBoxes.current.push(developed);
           setBoxes(data["boxes"]);
           setCars(data["cars"]);
           setStorages(data["storages"]);
           setIterations(prev => prev + 1);
-          setBurntPerc((burnt * 100).toFixed(2));
+          setDevelopedPerc((number - developed));
         });
-        }, 3000 / simSpeed);
+        }, 300 / simSpeed);
     };
 
     let handleStop = () => {
@@ -92,7 +92,7 @@
         <SwitchField label="Big Jump"
           checked={bigJumps} onChange={(e) => setBigJumps(e.target.checked)} />
         <p>Iterations: {iterations}</p> 
-        <p>Burnt boxes percentage: {burntPerc}%</p>
+        <p>Developed boxes: {developedPerc}</p>
         
         <svg width={sizing * sliderGridSize} height={sizing * sliderGridSize} xmlns="http://www.w3.org/2000/svg" style={{backgroundColor:"white"}}>
   {
