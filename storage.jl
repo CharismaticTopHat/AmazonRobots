@@ -16,9 +16,10 @@ orient_right = 3
     status::BoxStatus = waiting
 end
 
-@agent struct car(GridAgent{2})
+@agent struct car(GridAgent{2}) 
     capacity::CarStatus = empty
     orientation::Float64 = orient_up
+    carried_box::Union{box, Nothing} = nothing
 end
 
 @agent struct storage(GridAgent{2})
@@ -130,49 +131,70 @@ end
 # Agent Step Function for Car
 function agent_step!(agent::car, model)
     if agent.capacity == empty
-        closest_box, _ = closest_box_nearby(agent, model)
-
-        if closest_box !== nothing
-            target_pos = closest_box.pos
-            current_pos = agent.pos
-
-            diff_x = target_pos[1] - current_pos[1]
-            diff_y = target_pos[2] - current_pos[2]
-
-            # Determine primary and secondary directions
-            if abs(diff_x) > abs(diff_y)
-                primary = (sign(diff_x), 0)
-                secondary = (0, sign(diff_y))
-            else
-                primary = (0, sign(diff_y))
-                secondary = (sign(diff_x), 0)
+        # Verificar si hay una caja en la posición actual del robot
+        for neighbor in nearby_agents(agent, model, 1.0)  # Buscar solo en su posición actual
+            if isa(neighbor, box) && neighbor.status == waiting
+                # Cambiar el estado de la caja a 'taken' y asignarla al robot
+                neighbor.status = taken
+                agent.capacity = full
+                agent.carried_box = neighbor  # Asigna la caja al robot para que la lleve consigo
+                println("Car picked up the box at position $(neighbor.pos), now searching for storage")
+                break
             end
+        end
+        
+        # Si no hay una caja en la posición actual, busca la más cercana
+        if agent.capacity == empty
+            closest_box, _ = closest_box_nearby(agent, model)
 
-            # Try primary direction
-            if try_move!(agent, model, primary[1], primary[2])
-                # Move successful
-            else
-                # Try secondary direction
-                if try_move!(agent, model, secondary[1], secondary[2])
+            if closest_box !== nothing
+                target_pos = closest_box.pos
+                current_pos = agent.pos
+
+                diff_x = target_pos[1] - current_pos[1]
+                diff_y = target_pos[2] - current_pos[2]
+
+                # Determine primary and secondary directions
+                if abs(diff_x) > abs(diff_y)
+                    primary = (sign(diff_x), 0)
+                    secondary = (0, sign(diff_y))
+                else
+                    primary = (0, sign(diff_y))
+                    secondary = (sign(diff_x), 0)
+                end
+
+                # Try primary direction
+                if try_move!(agent, model, primary[1], primary[2])
                     # Move successful
                 else
-                    # Try random move
-                    random_move!(agent, model)
+                    # Try secondary direction
+                    if try_move!(agent, model, secondary[1], secondary[2])
+                        # Move successful
+                    else
+                        # Try random move
+                        random_move!(agent, model)
+                    end
                 end
-            end
 
-            # Check if arrived at the box
-            if agent.pos == closest_box.pos
-                closest_box.status = taken
-                agent.capacity = full
-                println("Car picked up the box at position $(closest_box.pos), now searching for storage")
+                # Check if arrived at the box
+                if agent.pos == closest_box.pos
+                    closest_box.status = taken
+                    agent.capacity = full
+                    agent.carried_box = closest_box  # Asigna la caja al robot
+                    println("Car picked up the box at position $(closest_box.pos), now searching for storage")
+                end
+            else
+                # No box found, try moving down
+                try_move!(agent, model, 0, -1)
             end
-        else
-            # No box found, try moving down
-            try_move!(agent, model, 0, -1)
         end
 
     elseif agent.capacity == full
+        # Actualizar la posición de la caja para que se mueva con el robot
+        if agent.carried_box !== nothing
+            move_agent!(agent.carried_box, agent.pos, model)  # Incluye el modelo
+        end        
+
         closest_storage, _ = closest_storage_nearby(agent, model)
 
         if closest_storage !== nothing && closest_storage.boxes > 0
@@ -209,12 +231,10 @@ function agent_step!(agent::car, model)
                 agent.capacity = empty
                 closest_storage.boxes -= 1
                 println("Car delivered the box to storage at position $(closest_storage.pos), now searching for new box")
-                # Update the box status to delivered
-                for neighbor in allagents(model)
-                    if isa(neighbor, box) && neighbor.status == taken
-                        neighbor.status = delivered
-                        break
-                    end
+                # Actualizar la caja como entregada
+                if agent.carried_box !== nothing
+                    agent.carried_box.status = delivered
+                    agent.carried_box = nothing  # El robot ya no lleva una caja
                 end
             end
         else

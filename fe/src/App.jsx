@@ -99,7 +99,7 @@ function App() {
 
       {/* Add SwitchField to control grid visibility */}
       <SwitchField label="Show Grid" 
-        checked={showGrid} isDisabled={button} onChange={(e) => setShowGrid(e.target.checked)} />
+        checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
 
       <p>Iterations: {iterations}</p> 
       <p>Boxes Missing of Delivery: {deliveredPerc}</p>
