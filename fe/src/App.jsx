@@ -186,7 +186,7 @@ function App() {
               y={(storage.pos[1] - 1) * sizing}
               width={sizing}
               height={sizing}
-              href={"./greentree.svg"} // Path to storage image
+              href={storage.boxes <= "0" ? "./0.png" : storage.boxes <= "1" ? "./1.png" : storage.boxes <= "2" ? "./2.png" : storage.boxes <= "3" ? "./3.png" : storage.boxes <= "4" ? "./4.png" : "./5.png" } // Path to storage image
             />
           ))
         }
