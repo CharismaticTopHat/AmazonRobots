@@ -8,11 +8,11 @@ instances = Dict()
 # Ruta para iniciar una nueva simulación
 route("/simulations", method = POST) do
     payload = jsonpayload()
-    x = payload["dim"][1]
-    y = payload["dim"][2]
-    number = payload["number"]
+    #x = payload["dim"][1]
+    #y = payload["dim"][2]
+    #number = payload["number"]
 
-    model = initialize_model(griddims = (x, y), number = number)
+    model = initialize_model(griddims = (80, 80), number = 80)
     id = string(uuid1())  # Crea un identificador único para la instancia de modelo
     instances[id] = model  # Almacena el modelo en el diccionario
 
