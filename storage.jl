@@ -99,12 +99,12 @@ function agent_step!(agent::car, model)
             if agent.pos == closest_box.pos
                 closest_box.status = taken
                 agent.capacity = full 
-                println("Car picked up the box at position $(closest_box.pos), now searching for storage")
+                #println("Car picked up the box at position $(closest_box.pos), now searching for storage")
             end
         else
             new_position = (agent.pos[1], agent.pos[2] - 1)
             move_agent!(agent, new_position, model)
-            println("No box found, moving randomly to position $new_position")
+            #println("No box found, moving randomly to position $new_position")
         end
 
     elseif agent.capacity == full
@@ -124,17 +124,17 @@ function agent_step!(agent::car, model)
             end
 
             move_agent!(agent, new_position, model)
-            println("Car moving to storage at position $(closest_storage.pos)")
+            #println("Car moving to storage at position $(closest_storage.pos)")
 
             if agent.pos == closest_storage.pos
                 agent.capacity = empty
                 closest_storage.boxes += 1
-                println("Car delivered the box to storage at position $(closest_storage.pos), now searching for new box")
+                #println("Car delivered the box to storage at position $(closest_storage.pos), now searching for new box")
             end
         else
             new_position = (agent.pos[1], agent.pos[2] - 1)
             move_agent!(agent, new_position, model)
-            println("No storage found, moving randomly to position $new_position")
+            #println("No storage found, moving randomly to position $new_position")
         end
     end
 end

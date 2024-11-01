@@ -40,12 +40,18 @@ for car in datos["cars"]:
     carsXCoords.append(car["pos"][0])
     carsYCoords.append(car["pos"][1])
 
+boxesXCoords = []
+boxesYCoords = []
+for box in datos["boxes"]:
+    boxesXCoords.append(box["pos"][0])
+    boxesYCoords.append(box["pos"][1])
+
 pygame.init()
 
 opera = OpMat()
 
 robots = {f"r{i}": Robot(opera) for i, _ in enumerate(datos["cars"])}
-
+packages = {f"r{i}": Box(opera) for i, _ in enumerate(datos["boxes"])}
 
 def Axis():
     glShadeModel(GL_FLAT)
@@ -66,27 +72,35 @@ def Axis():
 
 
 def display():
-    global datos  # Access `datos` in this function
+    global datos
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glColor3f(0.3, 0.3, 0.3)
     glBegin(GL_QUADS)
-    glVertex3d(-DimBoard, 0, -DimBoard)
-    glVertex3d(-DimBoard, 0, DimBoard)
-    glVertex3d(DimBoard, 0, DimBoard)
-    glVertex3d(DimBoard, 0, -DimBoard)
+    glVertex3d(0, 0, -DimBoard)
+    glVertex3d(0, 0, DimBoard)
+    glVertex3d(0, 0, DimBoard)
+    glVertex3d(0, 0, -DimBoard)
     glEnd()
     
     for i, car in enumerate(datos["cars"]):
         robot = robots[f"r{i}"]
         robot.setColor(1.0, 1.0, 1.0)
-        robot.setScale(5)
+        robot.setScale(1)
         robot.render()
 
         response = requests.get(URL_BASE + LOCATION)
         datos = response.json()
         car_data = datos["cars"][i]
         robot.opera.translate(car_data["pos"][0], car_data["pos"][1])
+    
+    for i, box in enumerate(datos["boxes"]):
+        package = packages[f"r{i}"]
+        package.setColor(1.0, 1.0, 0.0)
+        package.setScale(1)
+        package.render()
 
+        box_data = box  # Fetch box position from the updated `datos`
+        package.opera.translate(box_data["pos"][0], box_data["pos"][1])
 
 opera.loadId()
 
@@ -97,7 +111,7 @@ def init():
 
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(-450, 450, -300, 300)
+    gluOrtho2D(0, 100, 0, 100)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     glClearColor(0, 0, 0, 0)
