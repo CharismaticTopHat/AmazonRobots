@@ -92,7 +92,7 @@ class Robot:
                 Dinit += E
             x += signX
             
-            glPointSize(5.0)
+            glPointSize(2.0)
             glBegin(GL_POINTS)
             if steep:
                 glVertex2f(y, x)
