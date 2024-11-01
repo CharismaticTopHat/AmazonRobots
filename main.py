@@ -11,11 +11,11 @@ screen_height = 600
 
 # Variables para dibujar los ejes del sistema
 X_MIN = 0
-X_MAX = 1000
+X_MAX = 825
 Y_MIN = 0
-Y_MAX = 1000
+Y_MAX = 825
 # Dimension del Plano
-DimBoard = 1000
+DimBoard = 825
 
 # Archivos propios
 from OpMat import OpMat
@@ -44,6 +44,12 @@ boxesYCoords = []
 for box in datos["boxes"]:
     boxesXCoords.append(box["pos"][0]*10)
     boxesYCoords.append(box["pos"][1]*10)
+    
+storagesXCoords = []
+storagesYCoords = []
+for storage in datos["storages"]:
+    storagesXCoords.append(storage["pos"][0]*10)
+    storagesYCoords.append(storage["pos"][1]*10)
 
 pygame.init()
 
@@ -91,7 +97,7 @@ def display():
         response = requests.get(URL_BASE + LOCATION)
         datos = response.json()
         car_data = datos["robots"][i]
-        robot.opera.translate(car_data["pos"][0]*10, car_data["pos"][1]*10)
+        robot.opera.translate(car_data["pos"][0]*20, car_data["pos"][1]*20)
     
     for i, box in enumerate(datos["boxes"]):
         package = packages[f"b{i}"]
@@ -103,8 +109,12 @@ def display():
     
     for i, storage in enumerate(datos["storages"]):
         storage = storages[f"s{i}"]
-        storage.setColor(0.0,1.0,1.0)
+        storage.setColor(0.0, 1.0, 1.0)
         storage.render()
+
+        storage_pos = datos["storages"][i]["pos"]
+        storage.opera.translate(storage_pos[0]*10, storage_pos[1]*10)
+
 
 opera.loadId()
 
@@ -115,7 +125,7 @@ def init():
 
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(-100, 1000, -100, 1000)
+    gluOrtho2D(-25, DimBoard, -25, DimBoard)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     glClearColor(0, 0, 0, 0)
