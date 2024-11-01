@@ -2,10 +2,10 @@ include("storage.jl")
 using Genie, Genie.Renderer.Json, Genie.Requests, HTTP
 using UUIDs
 
-# Dictionary to store simulation instances
+# Diccionario para almacenar instancias de simulación
 instances = Dict()
 
-# Route to start a new simulation
+# Ruta para iniciar una nueva simulación
 route("/simulations", method = POST) do
     payload = jsonpayload()
     x = payload["dim"][1]
@@ -13,57 +13,57 @@ route("/simulations", method = POST) do
     number = payload["number"]
 
     model = initialize_model(griddims = (x, y), number = number)
-    id = string(uuid1())  # Create a unique identifier for the model instance
-    instances[id] = model  # Store the model in the dictionary
+    id = string(uuid1())  # Crea un identificador único para la instancia de modelo
+    instances[id] = model  # Almacena el modelo en el diccionario
 
-    # Collect all agents (boxes, cars, storages)
+    # Recopila todos los agentes (cajas, coches, almacenamientos)
     boxes = []
-    cars = []
+    robots = []
     storages = []
     for agent in allagents(model)
         if agent isa box
             push!(boxes, agent)
-        elseif agent isa car
-            push!(cars, agent)
+        elseif agent isa robot
+            push!(robots, agent)
         elseif agent isa storage
             push!(storages, agent)
         end
     end
     
-    # Return the simulation details with the simulation ID and agents
-    json(Dict(:msg => "Simulation started", "Location" => "/simulations/$id", "boxes" => boxes, "cars" => cars, "storages" => storages))
+    # Retorna los detalles de la simulación con el ID y agentes de la simulación
+    json(Dict(:msg => "Simulación iniciada", "Location" => "/simulations/$id", "boxes" => boxes, "robots" => robots, "storages" => storages))
 end
 
-# Route to run the simulation for a specific ID
+# Ruta para ejecutar la simulación con un ID específico
 route("/simulations/:id", method = GET) do
-    model_id = params(:id)  # Extract the model ID from the URL parameters
-    model = instances[model_id]  # Retrieve the corresponding model from the dictionary
-    run!(model, 1)  # Run the model for 1 step
+    model_id = params(:id)  # Extrae el ID del modelo desde los parámetros de la URL
+    model = instances[model_id]  # Recupera el modelo correspondiente del diccionario
+    run!(model, 1)  # Ejecuta el modelo por un paso
 
-    # Collect all agents (boxes, cars, storages) after running the model
+    # Recopila todos los agentes (cajas, coches, almacenamientos) tras ejecutar el modelo
     boxes = []
-    cars = []
+    robots = []
     storages = []
     for agent in allagents(model)
         if agent isa box
             push!(boxes, agent)
-        elseif agent isa car
-            push!(cars, agent)
+        elseif agent isa robot
+            push!(robots, agent)
         elseif agent isa storage
             push!(storages, agent)
         end
     end
     
-    # Return the updated state of the simulation
-    json(Dict(:msg => "Simulation step completed", "boxes" => boxes, "cars" => cars, "storages" => storages))
+    # Retorna el estado actualizado de la simulación
+    json(Dict(:msg => "Paso de simulación completado", "boxes" => boxes, "robots" => robots, "storages" => storages))
 end
 
-# CORS settings
+# Configuración de CORS (Cross-Origin Resource Sharing)
 Genie.config.run_as_server = true
 Genie.config.cors_headers["Access-Control-Allow-Origin"] = "*"
 Genie.config.cors_headers["Access-Control-Allow-Headers"] = "Content-Type"
 Genie.config.cors_headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
 Genie.config.cors_allowed_origins = ["*"]
 
-# Start the Genie server
+# Inicia el servidor de Genie
 up()

@@ -4,35 +4,33 @@ import { useRef, useState } from 'react';
 import '@aws-amplify/ui-react/styles.css';
 
 function App() {
+  // Estados para parámetros de simulación y visualización
   const [location, setLocation] = useState("");
-  const [gridSize, setGridSize] = useState(80);
-  const [probability_of_spread, setProbability] = useState(100);
-  const [button, setButton] = useState(false); // Estado para manejar el botón de Setup
-  const [simSpeed, setSimSpeed] = useState(2);
-  const [boxes, setBoxes] = useState([]);
-  const [cars, setCars] = useState([]);
-  const [storages, setStorages] = useState([]);
-  const [iterations, setIterations] = useState(0);
-  const [deliveredPerc, setDeliveredPerc] = useState(0);
-  const [number, setNumber] = useState(40);
-  const [sliderGridSize, setSliderGridSize] = useState(80);
-  const [south_wind_speed, setSouthWindSpeed] = useState(0);
-  const [west_wind_speed, setWestWindSpeed] = useState(0);
-  const [bigJumps, setBigJumps] = useState(false);
-  const [showGrid, setShowGrid] = useState(false); // New state for grid visibility
+  const [gridSize, setGridSize] = useState(80);  // Tamaño de la cuadrícula
+  const [button, setButton] = useState(false); // Estado para el botón de "Setup"
+  const [simSpeed, setSimSpeed] = useState(2);  // Velocidad de la simulación
+  const [boxes, setBoxes] = useState([]);  // Estado para almacenar las cajas
+  const [robots, setRobots] = useState([]);  // Estado para almacenar los coches
+  const [storages, setStorages] = useState([]);  // Estado para los almacenamientos
+  const [iterations, setIterations] = useState(0);  // Número de iteraciones
+  const [deliveredPerc, setDeliveredPerc] = useState(0);  // Porcentaje de cajas entregadas
+  const [number, setNumber] = useState(40);  // Número de cajas
+  const [sliderGridSize, setSliderGridSize] = useState(80);  // Tamaño de la cuadrícula ajustable
+  const [showGrid, setShowGrid] = useState(false); // Mostrar/ocultar cuadrícula
 
   const deliveredBoxes = useRef(null);
-  const sizing = 12.5;
-  const running = useRef(null);
+  const sizing = 12.5;  // Tamaño base para cálculo de posiciones
+  const running = useRef(null);  // Control del estado de ejecución de la simulación
 
-  // Define the orientation to angle mapping
+  // Mapeo de orientaciones a ángulos de rotación
   const orientationToAngle = {
-    0: 0,   // Up
-    1: -90,   // Left
-    2: 180,    // Down
-    3: 90      // Right
+    0: 0,   // Arriba
+    1: -90,   // Izquierda
+    2: 180,    // Abajo
+    3: 90      // Derecha
   };
 
+  // Configuración inicial de la simulación
   const setup = () => {
     setGridSize(sliderGridSize);
     fetch("http://localhost:8000/simulations", {
@@ -40,23 +38,20 @@ function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         dim: [sliderGridSize, sliderGridSize],
-        probability_of_spread: probability_of_spread,
         number: number,
-        south_wind_speed: south_wind_speed,
-        west_wind_speed: west_wind_speed,
-        bigJumps: bigJumps
       })
     }).then(resp => resp.json())
     .then(data => {
-      setLocation(data["Location"]);
+      setLocation(data["Location"]);  // Almacena la ubicación de la simulación en el backend
       setBoxes(data["boxes"]);
-      setCars(data["cars"]);
+      setRobots(data["robots"]);
       setStorages(data["storages"]);
       setIterations(0);
       setDeliveredPerc(0);
     });
   };
 
+  // Iniciar la simulación
   const handleStart = () => {
     deliveredBoxes.current = [];
     setButton(true);
@@ -64,23 +59,28 @@ function App() {
       fetch("http://localhost:8000" + location)
       .then(res => res.json())
       .then(data => {
-        let delivered = data["boxes"].filter(b => b.status === "delivered").length;
+        let delivered = data["boxes"].filter(b => b.status === "delivered").length;  // Filtra cajas entregadas
+        let stopRobots = data["robots"].filter(r => r.stopped == "moving").length;  // Filtra coches en movimiento
         deliveredBoxes.current.push(delivered);
+        // Si no hay coches en movimiento, detiene la simulación
+        if (stopRobots == 0) {
+          handleStop();  // Detiene el intervalo y restablece el estado del botón
+          return;
+        }
         setBoxes(data["boxes"]);
-        setCars(data["cars"]);
+        setRobots(data["robots"]);
         setStorages(data["storages"]);
-        setIterations(prev => prev + 1);
-        setDeliveredPerc((number - delivered));
+        setIterations(prev => prev + 1);  // Incrementa las iteraciones
+        setDeliveredPerc((number - delivered));  // Calcula el porcentaje de cajas no entregadas
       });
     }, 300 / simSpeed);
   };
 
+  // Detener la simulación
   const handleStop = () => {
     setButton(false);
     clearInterval(running.current);
   };
-
-  const offset = ((sizing * sliderGridSize) - gridSize * 12) / 2;
 
   return (
     <>
@@ -90,27 +90,27 @@ function App() {
         <Button onClick={handleStop} isDisabled={!button}>Stop</Button>
       </ButtonGroup>
 
-      <SliderField label="Grid size" min={40} max={80} step={10}
-        value={sliderGridSize} onChange={setSliderGridSize} />
-      <SliderField label="Simulation speed" min={1} max={30}
-        value={simSpeed} onChange={setSimSpeed} />
-      <SliderField label="Number of Boxes" min={10} max={100} step={10}
-        value={number} onChange={setNumber} />
+      {/* Controles de la simulación */}
+      <SliderField label="Tamaño del Mapa" min={40} max={80} step={10}
+        value={sliderGridSize} onChange={setSliderGridSize} isDisabled={button} />
+      <SliderField label="Velocidad de Simulación" min={1} max={30}
+        value={simSpeed} onChange={setSimSpeed} isDisabled={button} />
+      <SliderField label="Número de Cajas" min={10} max={100} step={10}
+        value={number} onChange={setNumber} isDisabled={button} />
 
-      {/* Add SwitchField to control grid visibility */}
-      <SwitchField label="Show Grid" 
+      {/* Mostrar/ocultar cuadrícula */}
+      <SwitchField label="Mostrar Cuadrícula" 
         checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
 
-      <p>Iterations: {iterations}</p> 
-      <p>Boxes Missing of Delivery: {deliveredPerc}</p>
+      <p>Iteraciones: {iterations}</p> 
+      <p>Cajas Faltantes de Entrega: {deliveredPerc}</p>
       
       <svg width={sizing * sliderGridSize} height={sizing * sliderGridSize} xmlns="http://www.w3.org/2000/svg" style={{backgroundColor:"white"}}>
         {
-          // Conditionally render horizontal and vertical lines for the grid
+          // Renderizado condicional de líneas horizontales y verticales para la cuadrícula
           showGrid && (
             <>
               {
-                // Horizontal lines
                 Array.from({ length: sliderGridSize + 1 }).map((_, i) => (
                   <line
                     key={`h-line-${i}`}
@@ -124,7 +124,6 @@ function App() {
                 ))
               }
               {
-                // Vertical lines
                 Array.from({ length: sliderGridSize + 1 }).map((_, i) => (
                   <line
                     key={`v-line-${i}`}
@@ -141,44 +140,42 @@ function App() {
           )
         }
         {
+          // Renderiza cajas en la cuadrícula
           boxes.map(box => (
             <image
               key={box.id}
-              x={(box.pos[0] - 1) * sizing} // Adjust to start from the edge
-              y={(box.pos[1] - 1) * sizing} // Adjust to start from the edge
+              x={(box.pos[0] - 1) * sizing}
+              y={(box.pos[1] - 1) * sizing}
               width={sizing}  
               height={sizing} 
-              href={"./caja.png"} // Path to box image
+              href={"./caja.png"}  // Ruta de la imagen de la caja
             />
           ))
         }
         {
-          cars.map(car => {
-            // Calculate rotation angle
-            const angle = orientationToAngle[car.orientation] || 0;
-
-            // Calculate position
-            const xPos = (car.pos[0] - 1) * sizing;
-            const yPos = (car.pos[1] - 1) * sizing;
-
-            // Calculate center for rotation
+          // Renderiza coches en la cuadrícula
+          robots.map(robot => {
+            const angle = orientationToAngle[robot.orientation] || 0;
+            const xPos = (robot.pos[0] - 1) * sizing;
+            const yPos = (robot.pos[1] - 1) * sizing;
             const centerX = xPos + sizing / 2;
             const centerY = yPos + sizing / 2;
 
             return (
               <image
-                key={car.id}
+                key={robot.id}
                 x={xPos}
                 y={yPos}
                 width={sizing}
                 height={sizing}
-                href={"./vite.svg"} // Path to car image
+                href={"./vite.svg"}  // Ruta de la imagen del coche
                 transform={`rotate(${angle}, ${centerX}, ${centerY})`}
               />
             );
           })
         }
         {
+          // Renderiza almacenamientos en la cuadrícula con imágenes basadas en la cantidad de cajas
           storages.map(storage => (
             <image
               key={storage.id}
@@ -186,7 +183,7 @@ function App() {
               y={(storage.pos[1] - 1) * sizing}
               width={sizing}
               height={sizing}
-              href={storage.boxes <= "0" ? "./0.png" : storage.boxes <= "1" ? "./1.png" : storage.boxes <= "2" ? "./2.png" : storage.boxes <= "3" ? "./3.png" : storage.boxes <= "4" ? "./4.png" : "./5.png" } // Path to storage image
+              href={storage.boxes <= "0" ? "./0.png" : storage.boxes <= "1" ? "./1.png" : storage.boxes <= "2" ? "./2.png" : storage.boxes <= "3" ? "./3.png" : storage.boxes <= "4" ? "./4.png" : "./5.png" }  // Ruta de la imagen de almacenamiento según cajas
             />
           ))
         }
