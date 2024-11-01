@@ -10,6 +10,8 @@ Abigail Pérez García
 # A01736815
 Rodrigo López Guerra
 # A01737437
+Alejandro Guzmán Sánchez
+# A01736793
 
 # ITESM Puebla
 ```
