@@ -51,7 +51,8 @@ pygame.init()
 opera = OpMat()
 
 robots = {f"r{i}": Robot(opera) for i, _ in enumerate(datos["cars"])}
-packages = {f"r{i}": Box(opera) for i, _ in enumerate(datos["boxes"])}
+packages = {f"b{i}": Box(opera) for i, _ in enumerate(datos["boxes"])}
+storages = {f"s{i}": Box(opera) for i, _ in enumerate(datos["storages"])}
 
 def Axis():
     glShadeModel(GL_FLAT)
@@ -94,13 +95,19 @@ def display():
         robot.opera.translate(car_data["pos"][0], car_data["pos"][1])
     
     for i, box in enumerate(datos["boxes"]):
-        package = packages[f"r{i}"]
+        package = packages[f"b{i}"]
         package.setColor(1.0, 1.0, 0.0)
         package.setScale(1)
         package.render()
 
         box_data = box  # Fetch box position from the updated `datos`
         package.opera.translate(box_data["pos"][0], box_data["pos"][1])
+    
+    for i, storage in enumerate(datos["storages"]):
+        storage = storages[f"s{i}"]
+        storage.setColor(0.0,1.0,1.0)
+        storage.setScale(1)
+        storage.render()
 
 opera.loadId()
 
