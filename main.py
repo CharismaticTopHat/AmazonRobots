@@ -11,11 +11,11 @@ screen_height = 600
 
 # Variables para dibujar los ejes del sistema
 X_MIN = 0
-X_MAX = 100
+X_MAX = 1000
 Y_MIN = 0
-Y_MAX = 100
+Y_MAX = 1000
 # Dimension del Plano
-DimBoard = 100
+DimBoard = 1000
 
 # Archivos propios
 from OpMat import OpMat
@@ -36,14 +36,14 @@ initialY = datos["robots"][0]["pos"][1]
 robotsXCoords = []
 robotsYCoords = []
 for car in datos["robots"]:
-    robotsXCoords.append(car["pos"][0])
-    robotsYCoords.append(car["pos"][1])
+    robotsXCoords.append(car["pos"][0]*10)
+    robotsYCoords.append(car["pos"][1]*10)
 
 boxesXCoords = []
 boxesYCoords = []
 for box in datos["boxes"]:
-    boxesXCoords.append(box["pos"][0])
-    boxesYCoords.append(box["pos"][1])
+    boxesXCoords.append(box["pos"][0]*10)
+    boxesYCoords.append(box["pos"][1]*10)
 
 pygame.init()
 
@@ -85,27 +85,25 @@ def display():
     for i, car in enumerate(datos["robots"]):
         robot = robots[f"r{i}"]
         robot.setColor(1.0, 1.0, 1.0)
-        robot.setScale(1)
+        robot.setScale(0.5)
         robot.render()
 
         response = requests.get(URL_BASE + LOCATION)
         datos = response.json()
         car_data = datos["robots"][i]
-        robot.opera.translate(car_data["pos"][0], car_data["pos"][1])
+        robot.opera.translate(car_data["pos"][0]*10, car_data["pos"][1]*10)
     
     for i, box in enumerate(datos["boxes"]):
         package = packages[f"b{i}"]
         package.setColor(1.0, 1.0, 0.0)
-        package.setScale(1)
         package.render()
 
-        box_data = box  # Fetch box position from the updated `datos`
-        package.opera.translate(box_data["pos"][0], box_data["pos"][1])
+        box_data = box 
+        package.opera.translate(box_data["pos"][0]*10, box_data["pos"][1]*10)
     
     for i, storage in enumerate(datos["storages"]):
         storage = storages[f"s{i}"]
         storage.setColor(0.0,1.0,1.0)
-        storage.setScale(1)
         storage.render()
 
 opera.loadId()
@@ -117,7 +115,7 @@ def init():
 
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(0, 100, 0, 100)
+    gluOrtho2D(-100, 1000, -100, 1000)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     glClearColor(0, 0, 0, 0)
