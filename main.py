@@ -24,6 +24,7 @@ opera = OpMat()
 
 # Initialize data and objects
 robots = {}
+robotsNewPos = {}
 packages = {}
 storages = {}
 
@@ -55,8 +56,9 @@ def update_data(location):
 
 def initialize_objects(robots_data, boxes_data, storages_data):
     """Initialize robot, box, and storage objects based on the server data."""
-    for i, _ in enumerate(robots_data):
+    for i, rob in enumerate(robots_data):
         robots[f"r{i}"] = Robot(opera)
+        robotsNewPos[f"r{i}"] = (rob["nextPos"][0], rob["nextPos"][1]) 
     for i, _ in enumerate(boxes_data):
         packages[f"b{i}"] = Box(opera)
     for i, _ in enumerate(storages_data):
@@ -97,8 +99,22 @@ def display(robots_data, boxes_data, storages_data):
         robot = robots[f"r{i}"]
         robot.setColor(1.0, 1.0, 1.0)
         robot.setScale(0.5)
+
+        next_pos_x, next_pos_y = robotsNewPos[f"r{i}"]
+
+        current_pos_x = car["pos"][0]
+        current_pos_y = car["pos"][1]
+
+        dx = next_pos_x - current_pos_x
+        dy = next_pos_y - current_pos_y
+
+        if dx > 0:
+            robot.turnRight() 
+        elif dx < 0:
+            robot.turnLeft()   
+
         glPushMatrix()
-        robot.opera.translate(car["pos"][0] * ROBOT_SCALE, car["pos"][1] * ROBOT_SCALE)
+        robot.opera.translate(current_pos_x * ROBOT_SCALE, current_pos_y * ROBOT_SCALE)
         robot.render()
         glPopMatrix()
 
@@ -138,7 +154,7 @@ def init_opengl():
     pygame.display.set_caption("OpenGL: Amazon Robots")
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluOrtho2D(-25, DIM_BOARD, -25, DIM_BOARD)
+    gluOrtho2D(-100, 1000, -100, 1000)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     glClearColor(0, 0, 0, 0)
@@ -177,6 +193,4 @@ if robots_data:
         # Reduce delay to FRAME_DELAY for a faster frame rate
         pygame.time.wait(FRAME_DELAY)
 
-    pygame.quit()
-else:
-    print("Failed to fetch initial data.")
+pygame.quit()

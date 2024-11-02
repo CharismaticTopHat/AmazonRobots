@@ -24,6 +24,7 @@ end
     initial_x::Int = 0
     stopped::Movement = moving
     counter::Int = 0
+    nextPos::Tuple{Float64, Float64} = (0.0, 0.0)
 end
 
 @agent struct storage(GridAgent{2})
@@ -106,10 +107,35 @@ function update_orientation!(agent::robot, dx::Int, dy::Int)
     end
 end
 
+function try_move!(agent::robot, model, dx::Int, dy::Int, griddims)
+    current_pos = agent.pos  # Ensure agent.pos is defined
+    new_position = (current_pos[1] + dx, current_pos[2] + dy)
+    agent.nextPos = new_position
+    
+    # Check if the new position is in the restricted zone (last row)
+    if new_position[2] == griddims[2]
+        return false
+    end
+
+    # If no collision and within the allowed area, move the agent
+    if !detect_collision(agent, new_position, model)
+        move_agent!(agent, new_position, model)
+        
+        # Determine new orientation and update the counter if there's a change
+        new_orientation = (dx == 1) ? orient_right : (dx == -1) ? orient_left : (dy == 1) ? orient_up : orient_down
+        update_orientation_and_counter!(agent, new_orientation)
+        
+        return true
+    else
+        return false
+    end
+end
+
 # Intenta moverse a la nueva posición si no hay colisión y no es una zona restringida
 function try_move!(agent::robot, model, dx::Int, dy::Int, griddims)
     current_pos = agent.pos
     new_position = (current_pos[1] + dx, current_pos[2] + dy)
+    agent.nextPos = new_position
     
     # Verifica si la nueva posición está en la zona restringida (última fila)
     if new_position[2] == griddims[2]
