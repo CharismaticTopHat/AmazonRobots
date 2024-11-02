@@ -208,7 +208,7 @@ function App() {
                 y={yPos}
                 width={sizing}
                 height={sizing}
-                href={"./vite.svg"}
+                href={"./robot.png"}
                 className="robot-image"
                 transform={`rotate(${angle}, ${centerX}, ${centerY})`}
               />
