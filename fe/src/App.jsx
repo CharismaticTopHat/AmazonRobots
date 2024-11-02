@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, CheckboxField, SliderField, SwitchField } from '@aws-amplify/ui-react';
+import { Button, ButtonGroup, SliderField, SwitchField } from '@aws-amplify/ui-react';
 import { useRef, useState } from 'react';
 
 import '@aws-amplify/ui-react/styles.css';
@@ -24,11 +24,33 @@ function App() {
 
   // Mapeo de orientaciones a ángulos de rotación
   const orientationToAngle = {
-    0: 0,   // Arriba
-    1: -90,   // Izquierda
-    2: 180,    // Abajo
-    3: 90      // Derecha
+    0: 0,   // Up
+    1: 90,  // Left
+    2: 180, // Down
+    3: 270  // Right
   };
+
+  // Helper function to determine the correct angle rotation with only 90° or 180°
+  function getShortestAngle(currentOrientation, targetOrientation) {
+      if (currentOrientation === 0 && targetOrientation === 1) return 90;   // Up to Left
+      if (currentOrientation === 0 && targetOrientation === 3) return 270;  // Up to Right
+      if (currentOrientation === 0 && targetOrientation === 2) return 180;  // Up to Down
+
+      if (currentOrientation === 1 && targetOrientation === 0) return 0;    // Left to Up
+      if (currentOrientation === 1 && targetOrientation === 2) return 180;  // Left to Down
+      if (currentOrientation === 1 && targetOrientation === 3) return 270;  // Left to Right
+
+      if (currentOrientation === 2 && targetOrientation === 1) return 90;   // Down to Left
+      if (currentOrientation === 2 && targetOrientation === 3) return 270;  // Down to Right
+      if (currentOrientation === 2 && targetOrientation === 0) return 0;    // Down to Up
+
+      if (currentOrientation === 3 && targetOrientation === 0) return 0;    // Right to Up
+      if (currentOrientation === 3 && targetOrientation === 2) return 180;  // Right to Down
+      if (currentOrientation === 3 && targetOrientation === 1) return 90;   // Right to Left
+
+      // Default to target angle if no rotation needed
+      return orientationToAngle[targetOrientation];
+  }
 
   // Configuración inicial de la simulación
   const setup = () => {
@@ -60,10 +82,10 @@ function App() {
       .then(res => res.json())
       .then(data => {
         let delivered = data["boxes"].filter(b => b.status === "delivered").length;  // Filtra cajas entregadas
-        let stopRobots = data["robots"].filter(r => r.stopped == "moving").length;  // Filtra coches en movimiento
+        let stopRobots = data["robots"].filter(r => r.stopped === "moving").length;  // Filtra coches en movimiento
         deliveredBoxes.current.push(delivered);
         // Si no hay coches en movimiento, detiene la simulación
-        if (stopRobots == 0) {
+        if (stopRobots === 0) {
           handleStop();  // Detiene el intervalo y restablece el estado del botón
           return;
         }
@@ -84,6 +106,13 @@ function App() {
 
   return (
     <>
+      <style>
+          {`
+            .robot-image {
+                transition: transform 0.2s ease-in-out, x 0.2s ease-in-out, y 0.2s ease-in-out;
+            }
+          `}
+      </style>
       <ButtonGroup variation="primary">
         <Button onClick={setup} isDisabled={button}>Setup</Button>
         <Button onClick={handleStart} isDisabled={button}>Start</Button>
@@ -93,7 +122,7 @@ function App() {
       {/* Controles de la simulación */}
       <SliderField label="Tamaño del Mapa" min={40} max={80} step={10}
         value={sliderGridSize} onChange={setSliderGridSize} isDisabled={button} />
-      <SliderField label="Velocidad de Simulación" min={1} max={30}
+      <SliderField label="Velocidad de Simulación" min={1} max={10}
         value={simSpeed} onChange={setSimSpeed} isDisabled={button} />
       <SliderField label="Número de Cajas" min={10} max={100} step={10}
         value={number} onChange={setNumber} isDisabled={button} />
@@ -148,6 +177,7 @@ function App() {
               y={(box.pos[1] - 1) * sizing}
               width={sizing}  
               height={sizing} 
+              className="robot-image"
               href={"./caja.png"}  // Ruta de la imagen de la caja
             />
           ))
@@ -155,7 +185,17 @@ function App() {
         {
           // Renderiza coches en la cuadrícula
           robots.map(robot => {
-            const angle = orientationToAngle[robot.orientation] || 0;
+            // Inicializa la orientación previa
+            if (robot.previousOrientation === undefined) {
+                robot.previousOrientation = robot.orientation;
+            }
+
+            // Calcula el ángulo de rotación dependiendo del ángulo anterior
+            const angle = getShortestAngle(robot.previousOrientation, robot.orientation);
+
+            // Guarda el ángulo.
+            robot.previousOrientation = robot.orientation;
+
             const xPos = (robot.pos[0] - 1) * sizing;
             const yPos = (robot.pos[1] - 1) * sizing;
             const centerX = xPos + sizing / 2;
@@ -168,7 +208,8 @@ function App() {
                 y={yPos}
                 width={sizing}
                 height={sizing}
-                href={"./vite.svg"}  // Ruta de la imagen del coche
+                href={"./vite.svg"}
+                className="robot-image"
                 transform={`rotate(${angle}, ${centerX}, ${centerY})`}
               />
             );

@@ -86,7 +86,7 @@ function update_orientation_and_counter!(agent::robot, new_orientation::Real)
         angle_diff = abs(agent.orientation - new_orientation)
         
         # Determina el número de pasos necesarios para rotar
-        agent.counter = angle_diff == 1 || angle_diff == 3 ? 9 : 18
+        agent.counter = angle_diff == 2 ? 18 : 9
     else
         agent.counter = 0
     end
@@ -104,30 +104,6 @@ function update_orientation!(agent::robot, dx::Int, dy::Int)
         agent.orientation = orient_up
     elseif dy == -1
         agent.orientation = orient_down
-    end
-end
-
-function try_move!(agent::robot, model, dx::Int, dy::Int, griddims)
-    current_pos = agent.pos  # Ensure agent.pos is defined
-    new_position = (current_pos[1] + dx, current_pos[2] + dy)
-    agent.nextPos = new_position
-    
-    # Check if the new position is in the restricted zone (last row)
-    if new_position[2] == griddims[2]
-        return false
-    end
-
-    # If no collision and within the allowed area, move the agent
-    if !detect_collision(agent, new_position, model)
-        move_agent!(agent, new_position, model)
-        
-        # Determine new orientation and update the counter if there's a change
-        new_orientation = (dx == 1) ? orient_right : (dx == -1) ? orient_left : (dy == 1) ? orient_up : orient_down
-        update_orientation_and_counter!(agent, new_orientation)
-        
-        return true
-    else
-        return false
     end
 end
 
@@ -158,6 +134,11 @@ end
 
 
 function agent_step!(agent::robot, model, griddims)
+    # Decrementa el contador de espera del agente en caso de rotación
+    if agent.counter > 0
+        agent.counter -= 1
+        return  # No hace el resto del código.
+    end
     # Verifica si el coche está vacío y necesita encontrar una caja
     if agent.capacity === empty
         if any_box_nearby(agent, model, griddims)
