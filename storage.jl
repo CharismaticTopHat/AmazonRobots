@@ -23,6 +23,7 @@ end
     carried_box::Union{box, Nothing} = nothing
     initial_x::Int = 0
     stopped::Movement = moving
+    counter::Int = 0
 end
 
 @agent struct storage(GridAgent{2})
@@ -77,6 +78,21 @@ function detect_collision(agent::robot, target_pos, model)
     return false
 end
 
+function update_orientation_and_counter!(agent::robot, new_orientation::Real)
+    new_orientation = Float64(new_orientation)  # Convert to Float64 if necessary
+    if agent.orientation != new_orientation
+        # Calcula la rotación necesaria
+        angle_diff = abs(agent.orientation - new_orientation)
+        
+        # Determina el número de pasos necesarios para rotar
+        agent.counter = angle_diff == 1 || angle_diff == 3 ? 9 : 18
+    else
+        agent.counter = 0
+    end
+    # Actualiza la orientación
+    agent.orientation = new_orientation
+end
+
 # Actualiza la orientación del coche según la dirección de movimiento
 function update_orientation!(agent::robot, dx::Int, dy::Int)
     if dx == 1
@@ -103,12 +119,17 @@ function try_move!(agent::robot, model, dx::Int, dy::Int, griddims)
     # Si no hay colisión y está dentro del área permitida, se mueve
     if !detect_collision(agent, new_position, model)
         move_agent!(agent, new_position, model)
-        update_orientation!(agent, dx, dy)
+        
+        # Determina la nueva orientación y actualiza el contador si hay un cambio
+        new_orientation = dx == 1 ? orient_right : dx == -1 ? orient_left : dy == 1 ? orient_up : orient_down
+        update_orientation_and_counter!(agent, new_orientation)
+        
         return true
     else
         return false
     end
 end
+
 
 function agent_step!(agent::robot, model, griddims)
     # Verifica si el coche está vacío y necesita encontrar una caja
