@@ -25,6 +25,7 @@ opera = OpMat()
 # Initialize data and objects
 robots = {}
 robotsNewPos = {}
+robotOrientation = {}
 packages = {}
 storages = {}
 
@@ -58,7 +59,8 @@ def initialize_objects(robots_data, boxes_data, storages_data):
     """Initialize robot, box, and storage objects based on the server data."""
     for i, rob in enumerate(robots_data):
         robots[f"r{i}"] = Robot(opera)
-        robotsNewPos[f"r{i}"] = (rob["nextPos"][0], rob["nextPos"][1]) 
+        robotsNewPos[f"r{i}"] = (rob["nextPos"][0], rob["nextPos"][1])
+        robotOrientation[f"r{i}"] = (rob["orientation"])
     for i, _ in enumerate(boxes_data):
         packages[f"b{i}"] = Box(opera)
     for i, _ in enumerate(storages_data):
@@ -100,19 +102,47 @@ def display(robots_data, boxes_data, storages_data):
         robot.setColor(1.0, 1.0, 1.0)
         robot.setScale(0.5)
 
+        # Get current and next positions
         next_pos_x, next_pos_y = robotsNewPos[f"r{i}"]
-
         current_pos_x = car["pos"][0]
         current_pos_y = car["pos"][1]
 
+        # Calculate movement direction
         dx = next_pos_x - current_pos_x
         dy = next_pos_y - current_pos_y
 
-        if dx > 0:
-            robot.turnRight() 
-        elif dx < 0:
-            robot.turnLeft()   
+        # Retrieve and update the robot's orientation based on movement direction
+        current_orientation = robotOrientation[f"r{i}"]
 
+        if current_orientation == 0:  # Facing positive Y
+            if dx == 1:  # Move to positive X (right)
+                robot.turnRight()
+            elif dx == -1:  # Move to negative X (left)
+                robot.turnLeft()
+            elif dy == -1:  # Move to negative Y (down)
+                robot.turnRight()
+                robot.turnRight()
+        elif current_orientation == 1:  # Facing negative X
+            if dy == 1:  # Move to positive Y (up)
+                robot.turnRight()
+            elif dy == -1:  # Move to negative Y (down)
+                robot.turnLeft()
+        elif current_orientation == 2:  # Facing negative Y
+            if dx == 1:  # Move to positive X (right)
+                robot.turnLeft()
+            elif dx == -1:  # Move to negative X (left)
+                robot.turnRight()
+            elif dy == 1:  # Move to positive Y (up)
+                robot.turnRight()
+                robot.turnRight()
+        elif current_orientation == 3:  # Facing positive X
+            if dy == 1:  # Move to positive Y (up)
+                robot.turnLeft()
+            elif dy == -1:  # Move to negative Y (down)
+                robot.turnRight()
+        print([f"r{i}"], "Orientacion: ", current_orientation)
+
+        # Translate and render the robot
         glPushMatrix()
         robot.opera.translate(current_pos_x * ROBOT_SCALE, current_pos_y * ROBOT_SCALE)
         robot.render()
