@@ -19,10 +19,17 @@ end
 
 @agent struct robot(GridAgent{2})
     capacity::RobotStatus = empty
+<<<<<<< HEAD
     orientation::Float64 = orient_up
     carried_box::Union{box,Nothing} = nothing
+=======
+    orientation::Float64 = orient_right
+    carried_box::Union{box, Nothing} = nothing
+>>>>>>> 54a3a63acf6f217e36c2b9222222e6fda351c139
     initial_x::Int = 0
     stopped::Movement = moving
+    counter::Int = 0
+    nextPos::Tuple{Float64, Float64} = (0.0, 0.0)
 end
 
 @agent struct storage(GridAgent{2})
@@ -77,6 +84,28 @@ function detect_collision(agent::robot, target_pos, model)
     return false
 end
 
+function update_orientation_and_counter!(agent::robot, dx::Int, dy::Int)
+    new_orientation = if dx == 1
+        orient_right
+    elseif dx == -1
+        orient_left
+    elseif dy == 1
+        orient_up
+    elseif dy == -1
+        orient_down
+    else
+        agent.orientation  # No change if no movement
+    end
+    
+    if agent.orientation != new_orientation
+        angle_diff = abs(agent.orientation - new_orientation)
+        agent.counter = angle_diff == π ? 18 : 9  # Adjust counter based on rotation needed
+        agent.orientation = new_orientation
+    else
+        agent.counter = 0  # No counter if no change in orientation
+    end
+end
+
 # Actualiza la orientación del coche según la dirección de movimiento
 function update_orientation!(agent::robot, dx::Int, dy::Int)
     if dx == 1
@@ -94,23 +123,32 @@ end
 function try_move!(agent::robot, model, dx::Int, dy::Int, griddims)
     current_pos = agent.pos
     new_position = (current_pos[1] + dx, current_pos[2] + dy)
+<<<<<<< HEAD
 
     # Verifica si la nueva posición está en la zona restringida (última fila)
+=======
+    
+>>>>>>> 54a3a63acf6f217e36c2b9222222e6fda351c139
     if new_position[2] == griddims[2]
         return false
     end
 
-    # Si no hay colisión y está dentro del área permitida, se mueve
     if !detect_collision(agent, new_position, model)
         move_agent!(agent, new_position, model)
-        update_orientation!(agent, dx, dy)
+        update_orientation_and_counter!(agent, dx, dy)  # Update orientation for any movement
         return true
     else
         return false
     end
 end
 
+
 function agent_step!(agent::robot, model, griddims)
+    # Decrementa el contador de espera del agente en caso de rotación
+    if agent.counter > 0
+        agent.counter -= 1
+        return  # No hace el resto del código.
+    end
     # Verifica si el coche está vacío y necesita encontrar una caja
     if agent.capacity === empty
         if any_box_nearby(agent, model, griddims)
@@ -216,19 +254,19 @@ function move_towards!(agent::robot, target_pos, model, griddims)
     diff_y = target_pos[2] - current_pos[2]
 
     # Determina direcciones primaria y secundaria
-    if abs(diff_x) > abs(diff_y)
-        primary = (sign(diff_x), 0)
-        secondary = (0, sign(diff_y))
+    primary, secondary = if abs(diff_x) > abs(diff_y)
+        ((sign(diff_x), 0), (0, sign(diff_y)))
     else
-        primary = (0, sign(diff_y))
-        secondary = (sign(diff_x), 0)
+        ((0, sign(diff_y)), (sign(diff_x), 0))
     end
 
     # Intenta la dirección primaria sin entrar en la última fila
     if (current_pos[2] + primary[2]) < griddims[2] && try_move!(agent, model, primary[1], primary[2], griddims)
         # Movimiento exitoso
+        update_orientation_and_counter!(agent, primary[1], primary[2])
     elseif (current_pos[2] + secondary[2]) < griddims[2] && try_move!(agent, model, secondary[1], secondary[2], griddims)
         # Movimiento exitoso
+        update_orientation_and_counter!(agent, secondary[1], secondary[2])
     else
         println("No se encuentra manera de llegar al destino deseado. Se detendrá el agente.")
     end
