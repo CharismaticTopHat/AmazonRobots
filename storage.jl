@@ -17,10 +17,10 @@ orient_right = 3
     status::BoxStatus = waiting
 end
 
-@agent struct robot(GridAgent{2}) 
+@agent struct robot(GridAgent{2})
     capacity::RobotStatus = empty
     orientation::Float64 = orient_up
-    carried_box::Union{box, Nothing} = nothing
+    carried_box::Union{box,Nothing} = nothing
     initial_x::Int = 0
     stopped::Movement = moving
 end
@@ -94,7 +94,7 @@ end
 function try_move!(agent::robot, model, dx::Int, dy::Int, griddims)
     current_pos = agent.pos
     new_position = (current_pos[1] + dx, current_pos[2] + dy)
-    
+
     # Verifica si la nueva posición está en la zona restringida (última fila)
     if new_position[2] == griddims[2]
         return false
@@ -143,12 +143,12 @@ function agent_step!(agent::robot, model, griddims)
         if agent.carried_box !== nothing
             move_agent!(agent.carried_box, agent.pos, model)
         end
-        
+
         # Encuentra el almacenamiento más cercano e intenta hacer la entrega
         closest_storage, _ = closest_storage_nearby(agent, model)
         if closest_storage !== nothing
             move_towards!(agent, closest_storage.pos, model, griddims)
-            
+
             # Intenta la entrega si el coche está adyacente al almacenamiento
             if is_adjacent(agent.pos, closest_storage.pos)
                 deliver_box_in_front!(agent, model, closest_storage)
@@ -242,11 +242,11 @@ function agent_step!(agent::storage, model, griddims)
 end
 
 # Inicializa el modelo
-function initialize_model(; number = 40, griddims = (80, 80))
-    space = GridSpace(griddims; periodic = false, metric = :manhattan)
-    model = ABM(Union{robot, box, storage}, space; agent_step! = (a, m) -> agent_step!(a, m, griddims), scheduler = Schedulers.fastest)
+function initialize_model(; number=40, griddims=(80, 80))
+    space = GridSpace(griddims; periodic=false, metric=:manhattan)
+    model = ABM(Union{robot,box,storage}, space; (agent_step!)=(a, m) -> agent_step!(a, m, griddims), scheduler=Schedulers.fastest)
 
-    all_positions = [(x, y) for x in 1:griddims[1], y in 1:griddims[2] - 1] 
+    all_positions = [(x, y) for x in 1:griddims[1], y in 1:griddims[2]-1]
     shuffled_positions = shuffle(all_positions)
 
     num_robots = 5
@@ -254,10 +254,10 @@ function initialize_model(; number = 40, griddims = (80, 80))
     initial_position = div(griddims[1], 10)
     spacing = 2 * initial_position
 
-    robot_columns = [initial_position + (i-1) * spacing for i in 1:num_robots]
+    robot_columns = [initial_position + (i - 1) * spacing for i in 1:num_robots]
     robot_positions = [(col, bottom_y) for col in robot_columns]
     for robot_pos in robot_positions
-        add_agent!(robot, model; pos = robot_pos, initial_x = robot_pos[1])
+        add_agent!(robot, model; pos=robot_pos, initial_x=robot_pos[1])
     end
 
     restricted_positions = []
@@ -273,14 +273,14 @@ function initialize_model(; number = 40, griddims = (80, 80))
 
     # Añade cajas a posiciones válidas
     for i in 1:number
-        add_agent!(box, model; pos = valid_positions[i])
+        add_agent!(box, model; pos=valid_positions[i])
     end
 
     # Llena la última fila con almacenamiento, excluyendo posiciones de coches
     bottom_row_positions = [(x, bottom_y) for x in 1:griddims[1] if (x, bottom_y) ∉ robot_positions]
-    
+
     for pos in bottom_row_positions
-        add_agent!(storage, model; pos = pos)
+        add_agent!(storage, model; pos=pos)
     end
 
     return model
