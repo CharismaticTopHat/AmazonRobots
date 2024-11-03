@@ -1,5 +1,6 @@
 using Agents, Random
 using StaticArrays: SVector
+using Dates
 
 # Definición de Enums
 @enum BoxStatus waiting taken delivered
@@ -17,14 +18,14 @@ orient_right = 3
     status::BoxStatus = waiting
 end
 
-@agent struct robot(GridAgent{2})
+@agent struct robot(GridAgent{2}) 
     capacity::RobotStatus = empty
     orientation::Float64 = orient_right
-    carried_box::Union{box,Nothing} = nothing
+    carried_box::Union{box, Nothing} = nothing
     initial_x::Int = 0
     stopped::Movement = moving
     counter::Int = 0
-    nextPos::Tuple{Float64,Float64} = (0.0, 0.0)
+    nextPos::Tuple{Float64, Float64} = (0.0, 0.0)
 end
 
 @agent struct storage(GridAgent{2})
@@ -80,27 +81,30 @@ function detect_collision(agent::robot, target_pos, model)
 end
 
 function update_orientation_and_counter!(agent::robot, dx::Int, dy::Int)
-    new_orientation = if dx == 1
-        orient_right
+    new_orientation = agent.orientation
+
+    if dx == 1
+        new_orientation = orient_right
     elseif dx == -1
-        orient_left
+        new_orientation = orient_left
     elseif dy == 1
-        orient_up
+        new_orientation = orient_up
     elseif dy == -1
-        orient_down
-    else
-        agent.orientation  # No change if no movement
+        new_orientation = orient_down
     end
 
     if agent.orientation != new_orientation
-        angle_diff = abs(agent.orientation - new_orientation)
-        agent.counter = angle_diff == π ? 18 : 9  # Adjust counter based on rotation needed
+        if (agent.orientation == orient_up && new_orientation == orient_down) ||
+           (agent.orientation == orient_left && new_orientation == orient_right) ||
+           (agent.orientation == orient_down && new_orientation == orient_up) ||
+           (agent.orientation == orient_right && new_orientation == orient_left)
+            agent.counter = 18 
+        else
+            agent.counter = 9
+        end
         agent.orientation = new_orientation
-    else
-        agent.counter = 0  # No counter if no change in orientation
     end
 end
-
 # Actualiza la orientación del coche según la dirección de movimiento
 function update_orientation!(agent::robot, dx::Int, dy::Int)
     if dx == 1
@@ -118,7 +122,8 @@ end
 function try_move!(agent::robot, model, dx::Int, dy::Int, griddims)
     current_pos = agent.pos
     new_position = (current_pos[1] + dx, current_pos[2] + dy)
-
+    agent.nextPos = (new_position[1], new_position[2])
+    
     if new_position[2] == griddims[2]
         return false
     end
@@ -136,9 +141,12 @@ end
 function agent_step!(agent::robot, model, griddims)
     # Decrementa el contador de espera del agente en caso de rotación
     if agent.counter > 0
+        sleep(0.003) 
         agent.counter -= 1
-        return  # No hace el resto del código.
+        println("Contador:", agent.counter)
+        return
     end
+
     # Verifica si el coche está vacío y necesita encontrar una caja
     if agent.capacity === empty
         if any_box_nearby(agent, model, griddims)
@@ -270,11 +278,11 @@ function agent_step!(agent::storage, model, griddims)
 end
 
 # Inicializa el modelo
-function initialize_model(; number=40, griddims=(80, 80))
-    space = GridSpace(griddims; periodic=false, metric=:manhattan)
-    model = ABM(Union{robot,box,storage}, space; (agent_step!)=(a, m) -> agent_step!(a, m, griddims), scheduler=Schedulers.fastest)
+function initialize_model(; number = 40, griddims = (80, 80))
+    space = GridSpace(griddims; periodic = false, metric = :manhattan)
+    model = ABM(Union{robot, box, storage}, space; agent_step! = (a, m) -> agent_step!(a, m, griddims), scheduler = Schedulers.fastest)
 
-    all_positions = [(x, y) for x in 1:griddims[1], y in 1:griddims[2]-1]
+    all_positions = [(x, y) for x in 1:griddims[1], y in 1:griddims[2] - 1] 
     shuffled_positions = shuffle(all_positions)
 
     num_robots = 5
@@ -282,10 +290,10 @@ function initialize_model(; number=40, griddims=(80, 80))
     initial_position = div(griddims[1], 10)
     spacing = 2 * initial_position
 
-    robot_columns = [initial_position + (i - 1) * spacing for i in 1:num_robots]
+    robot_columns = [initial_position + (i-1) * spacing for i in 1:num_robots]
     robot_positions = [(col, bottom_y) for col in robot_columns]
     for robot_pos in robot_positions
-        add_agent!(robot, model; pos=robot_pos, initial_x=robot_pos[1])
+        add_agent!(robot, model; pos = robot_pos, initial_x = robot_pos[1])
     end
 
     restricted_positions = []
@@ -301,14 +309,14 @@ function initialize_model(; number=40, griddims=(80, 80))
 
     # Añade cajas a posiciones válidas
     for i in 1:number
-        add_agent!(box, model; pos=valid_positions[i])
+        add_agent!(box, model; pos = valid_positions[i])
     end
 
     # Llena la última fila con almacenamiento, excluyendo posiciones de coches
     bottom_row_positions = [(x, bottom_y) for x in 1:griddims[1] if (x, bottom_y) ∉ robot_positions]
-
+    
     for pos in bottom_row_positions
-        add_agent!(storage, model; pos=pos)
+        add_agent!(storage, model; pos = pos)
     end
 
     return model

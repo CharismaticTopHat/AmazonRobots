@@ -8,7 +8,7 @@ import requests
 # Constants
 SCREEN_WIDTH = 900
 SCREEN_HEIGHT = 600
-X_MIN, X_MAX, Y_MIN, Y_MAX, DIM_BOARD = 0, 825, 0, 825, 825
+X_MIN, X_MAX, Y_MIN, Y_MAX, DIM_BOARD = 0, 750, 0, 750, 750
 ROBOT_SCALE = 20
 BOX_SCALE = 10
 URL_BASE = "http://localhost:8000"
@@ -66,6 +66,12 @@ def initialize_objects(robots_data, boxes_data, storages_data):
     for i, _ in enumerate(storages_data):
         storages[f"s{i}"] = Box(opera)
 
+def update_robot_positions(robots_data):
+    """Refresh robotsNewPos and robotOrientation based on latest robots_data."""
+    for i, rob in enumerate(robots_data):
+        robotsNewPos[f"r{i}"] = (rob["nextPos"][0], rob["nextPos"][1])
+        robotOrientation[f"r{i}"] = rob["orientation"]
+
 def get_scaled_coords(data, scale_factor=10):
     """Get scaled coordinates from data for a given scale factor."""
     return [(item["pos"][0] * scale_factor, item["pos"][1] * scale_factor) for item in data]
@@ -87,6 +93,7 @@ def Axis():
     glLineWidth(1.0)
 
 def display(robots_data, boxes_data, storages_data):
+    print(robotOrientation)
     """Render the entire scene with robots, boxes, and storages."""
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glColor3f(0.3, 0.3, 0.3)
@@ -102,49 +109,58 @@ def display(robots_data, boxes_data, storages_data):
         robot.setColor(1.0, 1.0, 1.0)
         robot.setScale(0.5)
 
-        # Get current and next positions
         next_pos_x, next_pos_y = robotsNewPos[f"r{i}"]
         current_pos_x = car["pos"][0]
         current_pos_y = car["pos"][1]
 
-        # Calculate movement direction
         dx = next_pos_x - current_pos_x
         dy = next_pos_y - current_pos_y
 
-        # Retrieve and update the robot's orientation based on movement direction
         current_orientation = robotOrientation[f"r{i}"]
 
-        if current_orientation == 0:  # Facing positive Y
-            if dx == 1:  # Move to positive X (right)
+        # Update rotation logic for robot orientation
+        if current_orientation == 0:  # Facing "Y+"
+            if dx == 1: 
                 robot.turnRight()
-            elif dx == -1:  # Move to negative X (left)
+                robotOrientation[f"r{i}"] = 3  # Facing "X+"
+            elif dx == -1:  
                 robot.turnLeft()
-            elif dy == -1:  # Move to negative Y (down)
+                robotOrientation[f"r{i}"] = 1  # Facing "X-"
+            elif dy == -1: 
                 robot.turnRight()
                 robot.turnRight()
-        elif current_orientation == 1:  # Facing negative X
-            if dy == 1:  # Move to positive Y (up)
+                robotOrientation[f"r{i}"] = 2  # Facing "Y-"
+        elif current_orientation == 1:  # Facing "X-"
+            if dy == 1: 
                 robot.turnRight()
-            elif dy == -1:  # Move to negative Y (down)
+                robotOrientation[f"r{i}"] = 0  # Facing "Y+"
+            elif dy == -1: 
                 robot.turnLeft()
-        elif current_orientation == 2:  # Facing negative Y
-            if dx == 1:  # Move to positive X (right)
+                robotOrientation[f"r{i}"] = 2  # Facing "Y-"
+        elif current_orientation == 2:  # Facing "Y-"
+            if dx == 1: 
                 robot.turnLeft()
-            elif dx == -1:  # Move to negative X (left)
+                robotOrientation[f"r{i}"] = 3  # Facing "X+"
+            elif dx == -1: 
                 robot.turnRight()
-            elif dy == 1:  # Move to positive Y (up)
+                robotOrientation[f"r{i}"] = 1  # Facing "X-"
+            elif dy == 1: 
                 robot.turnRight()
                 robot.turnRight()
-        elif current_orientation == 3:  # Facing positive X
-            if dy == 1:  # Move to positive Y (up)
+                robotOrientation[f"r{i}"] = 0  # Facing "Y+"
+        elif current_orientation == 3:  # Facing "X+"
+            if dy == 1:
                 robot.turnLeft()
-            elif dy == -1:  # Move to negative Y (down)
+                robotOrientation[f"r{i}"] = 0  # Facing "Y+"
+            elif dy == -1: 
                 robot.turnRight()
-        print([f"r{i}"], "Orientacion: ", current_orientation)
+                robotOrientation[f"r{i}"] = 2  # Facing "Y-"
 
-        # Translate and render the robot
+        # Apply rotation and translation
         glPushMatrix()
         robot.opera.translate(current_pos_x * ROBOT_SCALE, current_pos_y * ROBOT_SCALE)
+        for _ in range(int(robot.remRotation / abs(robot.delta_theta))):
+            robot.opera.translate(current_pos_x * ROBOT_SCALE, current_pos_y * ROBOT_SCALE)
         robot.render()
         glPopMatrix()
 
@@ -219,6 +235,7 @@ if robots_data:
                 robots_data = new_data["robots"]
                 boxes_data = new_data["boxes"]
                 storages_data = new_data["storages"]
+                update_robot_positions(robots_data)
 
         # Reduce delay to FRAME_DELAY for a faster frame rate
         pygame.time.wait(FRAME_DELAY)
