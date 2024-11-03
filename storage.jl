@@ -19,17 +19,12 @@ end
 
 @agent struct robot(GridAgent{2})
     capacity::RobotStatus = empty
-<<<<<<< HEAD
-    orientation::Float64 = orient_up
-    carried_box::Union{box,Nothing} = nothing
-=======
     orientation::Float64 = orient_right
-    carried_box::Union{box, Nothing} = nothing
->>>>>>> 54a3a63acf6f217e36c2b9222222e6fda351c139
+    carried_box::Union{box,Nothing} = nothing
     initial_x::Int = 0
     stopped::Movement = moving
     counter::Int = 0
-    nextPos::Tuple{Float64, Float64} = (0.0, 0.0)
+    nextPos::Tuple{Float64,Float64} = (0.0, 0.0)
 end
 
 @agent struct storage(GridAgent{2})
@@ -96,7 +91,7 @@ function update_orientation_and_counter!(agent::robot, dx::Int, dy::Int)
     else
         agent.orientation  # No change if no movement
     end
-    
+
     if agent.orientation != new_orientation
         angle_diff = abs(agent.orientation - new_orientation)
         agent.counter = angle_diff == π ? 18 : 9  # Adjust counter based on rotation needed
@@ -123,12 +118,7 @@ end
 function try_move!(agent::robot, model, dx::Int, dy::Int, griddims)
     current_pos = agent.pos
     new_position = (current_pos[1] + dx, current_pos[2] + dy)
-<<<<<<< HEAD
 
-    # Verifica si la nueva posición está en la zona restringida (última fila)
-=======
-    
->>>>>>> 54a3a63acf6f217e36c2b9222222e6fda351c139
     if new_position[2] == griddims[2]
         return false
     end
