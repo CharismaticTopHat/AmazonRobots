@@ -1,6 +1,51 @@
 using Agents, Random
 using StaticArrays: SVector
 using Dates
+using PyCall
+
+#from py3dbp import Packer, Bin, Item
+Packer = pyimport("py3dbp").Packer
+Bin = pyimport("py3dbp").Bin
+Item = pyimport("py3dbp").Item
+
+packer = Packer()
+
+packer.add_bin(Bin("small-envelope", 11.5, 6.125, 0.25, 10))
+packer.add_bin(Bin("large-envelope", 15.0, 12.0, 0.75, 15))
+packer.add_bin(Bin("small-box", 8.625, 5.375, 1.625, 70.0))
+packer.add_bin(Bin("medium-box", 11.0, 8.5, 5.5, 70.0))
+packer.add_bin(Bin("medium-2-box", 13.625, 11.875, 3.375, 70.0))
+packer.add_bin(Bin("large-box", 12.0, 12.0, 5.5, 70.0))
+packer.add_bin(Bin("large-2-box", 23.6875, 11.75, 3.0, 70.0))
+
+packer.add_item(Item("50g [powder 1]", 3.9370, 1.9685, 1.9685))
+packer.add_item(Item("50g [powder 2]", 3.9370, 1.9685, 1.9685))
+packer.add_item(Item("50g [powder 3]", 3.9370, 1.9685, 1.9685))
+packer.add_item(Item("250g [powder 4]", 7.8740, 3.9370, 1.9685))
+packer.add_item(Item("250g [powder 5]", 7.8740, 3.9370, 1.9685))
+packer.add_item(Item("250g [powder 6]", 7.8740, 3.9370, 1.9685))
+packer.add_item(Item("250g [powder 7]", 7.8740, 3.9370, 1.9685))
+packer.add_item(Item("250g [powder 8]", 7.8740, 3.9370, 1.9685))
+packer.add_item(Item("250g [powder 9]", 7.8740, 3.9370, 1.9685))
+
+packer.pack()
+
+for b in packer[:bins]
+    println("::::::::::: ", b[:string]())
+
+    println("FITTED ITEMS:")
+    for item in b[:items]
+        println("====> ", item[:string]())
+    end
+
+    println("UNFITTED ITEMS:")
+    for item in b[:unfitted_items]
+        println("====> ", item[:string]())
+    end
+
+    println("***************************************************")
+    println("***************************************************")
+end
 
 # Definición de Enums
 @enum BoxStatus waiting taken delivered
@@ -26,6 +71,11 @@ end
     stopped::Movement = moving
     counter::Int = 0
     nextPos::Tuple{Float64, Float64} = (0.0, 0.0)
+    dx::Int = 0
+    dy::Int = 0
+    width::Float64 = 0.0
+    height::Float64 = 0.0
+    depth::Float64 = 0.0
 end
 
 @agent struct storage(GridAgent{2})
@@ -82,15 +132,18 @@ end
 
 function update_orientation_and_counter!(agent::robot, dx::Int, dy::Int)
     new_orientation = agent.orientation
-
     if dx == 1
         new_orientation = orient_right
+        agent.dx = dx
     elseif dx == -1
         new_orientation = orient_left
+        agent.dx = dx
     elseif dy == 1
         new_orientation = orient_up
+        agent.dy = dy
     elseif dy == -1
         new_orientation = orient_down
+        agent.dy = dy
     end
 
     if agent.orientation != new_orientation
@@ -143,7 +196,6 @@ function agent_step!(agent::robot, model, griddims)
     if agent.counter > 0
         sleep(0.003) 
         agent.counter -= 1
-        println("Contador:", agent.counter)
         return
     end
 

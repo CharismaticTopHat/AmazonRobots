@@ -24,8 +24,10 @@ opera = OpMat()
 
 # Initialize data and objects
 robots = {}
-robotsNewPos = {}
+robotsDx = {}
+robotsDy = {}
 robotOrientation = {}
+robotsCounter = {}
 packages = {}
 storages = {}
 
@@ -59,8 +61,10 @@ def initialize_objects(robots_data, boxes_data, storages_data):
     """Initialize robot, box, and storage objects based on the server data."""
     for i, rob in enumerate(robots_data):
         robots[f"r{i}"] = Robot(opera)
-        robotsNewPos[f"r{i}"] = (rob["nextPos"][0], rob["nextPos"][1])
+        robotsDx[f"r{i}"] = (rob["dx"])
+        robotsDy[f"r{i}"] = (rob["dy"])
         robotOrientation[f"r{i}"] = (rob["orientation"])
+        robotsCounter[f"r{i}"] = (rob["counter"])
     for i, _ in enumerate(boxes_data):
         packages[f"b{i}"] = Box(opera)
     for i, _ in enumerate(storages_data):
@@ -69,8 +73,10 @@ def initialize_objects(robots_data, boxes_data, storages_data):
 def update_robot_positions(robots_data):
     """Refresh robotsNewPos and robotOrientation based on latest robots_data."""
     for i, rob in enumerate(robots_data):
-        robotsNewPos[f"r{i}"] = (rob["nextPos"][0], rob["nextPos"][1])
         robotOrientation[f"r{i}"] = rob["orientation"]
+        robotsDx[f"r{i}"] = (rob["dx"])
+        robotsDy[f"r{i}"] = (rob["dy"])
+        robotsCounter[f"r{i}"] = (rob["counter"])
 
 def get_scaled_coords(data, scale_factor=10):
     """Get scaled coordinates from data for a given scale factor."""
@@ -109,54 +115,67 @@ def display(robots_data, boxes_data, storages_data):
         robot.setColor(1.0, 1.0, 1.0)
         robot.setScale(0.5)
 
-        next_pos_x, next_pos_y = robotsNewPos[f"r{i}"]
         current_pos_x = car["pos"][0]
         current_pos_y = car["pos"][1]
 
-        dx = next_pos_x - current_pos_x
-        dy = next_pos_y - current_pos_y
+        current_dx = robotsDx[f"r{i}"]
+        current_dy = robotsDy[f"r{i}"]
+        
+        current_counter = robotsCounter[f"r{i}"]
 
+        print(robot, "Dx", current_dx, "Dy", current_dy)
+        
         current_orientation = robotOrientation[f"r{i}"]
 
-        # Update rotation logic for robot orientation
-        if current_orientation == 0:  # Facing "Y+"
-            if dx == 1: 
-                robot.turnRight()
-                robotOrientation[f"r{i}"] = 3  # Facing "X+"
-            elif dx == -1:  
-                robot.turnLeft()
-                robotOrientation[f"r{i}"] = 1  # Facing "X-"
-            elif dy == -1: 
-                robot.turnRight()
-                robot.turnRight()
-                robotOrientation[f"r{i}"] = 2  # Facing "Y-"
-        elif current_orientation == 1:  # Facing "X-"
-            if dy == 1: 
-                robot.turnRight()
-                robotOrientation[f"r{i}"] = 0  # Facing "Y+"
-            elif dy == -1: 
-                robot.turnLeft()
-                robotOrientation[f"r{i}"] = 2  # Facing "Y-"
-        elif current_orientation == 2:  # Facing "Y-"
-            if dx == 1: 
-                robot.turnLeft()
-                robotOrientation[f"r{i}"] = 3  # Facing "X+"
-            elif dx == -1: 
-                robot.turnRight()
-                robotOrientation[f"r{i}"] = 1  # Facing "X-"
-            elif dy == 1: 
-                robot.turnRight()
-                robot.turnRight()
-                robotOrientation[f"r{i}"] = 0  # Facing "Y+"
-        elif current_orientation == 3:  # Facing "X+"
-            if dy == 1:
-                robot.turnLeft()
-                robotOrientation[f"r{i}"] = 0  # Facing "Y+"
-            elif dy == -1: 
-                robot.turnRight()
-                robotOrientation[f"r{i}"] = 2  # Facing "Y-"
+        print(robot, current_counter)
+        
+        if current_counter != 0:
+            if current_orientation == 0.0:  # Viendo "Y+"
+                if current_dx == 1: 
+                    print(robot,"Girando a X+")
+                    robot.turnRight()
+                    robotOrientation[f"r{i}"] = 3  # Viendo "X+"
+                elif current_dx == -1:  
+                    print(robot,"Girando a X-")
+                    robot.turnLeft()
+                    robotOrientation[f"r{i}"] = 1  # Viendo "X-"
+                elif current_dy == -1: 
+                    print(robot,"Girando a Y-")
+                    robot.turnRight()
+                    robot.turnRight()
+                    robotOrientation[f"r{i}"] = 2  # Viendo "Y-"
+            elif current_orientation == 1:  # Viendo "X-"
+                if current_dy == 1.0: 
+                    print(robot,"Girando a Y+")
+                    robot.turnRight()
+                    robotOrientation[f"r{i}"] = 0  # Viendo "Y+"
+                elif current_dy == -1: 
+                    robot.turnLeft()
+                    robotOrientation[f"r{i}"] = 2  # Viendo "Y-"
+            elif current_orientation == 2.0:  # Viendo "Y-"
+                if current_dx == 1: 
+                    print(robot,"Girando a X+")
+                    robot.turnLeft()
+                    robotOrientation[f"r{i}"] = 3  # Viendo "X+"
+                elif current_dx == -1: 
+                    print(robot,"Girando a X-")
+                    robot.turnRight()
+                    robotOrientation[f"r{i}"] = 1  # Viendo "X-"
+                elif current_dy == 1: 
+                    print(robot,"Girando a Y+")
+                    robot.turnRight()
+                    robot.turnRight()
+                    robotOrientation[f"r{i}"] = 0  # Viendo "Y+"
+            elif current_orientation == 3.0:  # Viendo "X+"
+                if current_dy == 1:
+                    print(robot,"Girando a Y+")
+                    robot.turnLeft()
+                    robotOrientation[f"r{i}"] = 0  # Viendo "Y+"
+                elif current_dy == -1: 
+                    print(robot,"Girando a Y-")
+                    robot.turnRight()
+                    robotOrientation[f"r{i}"] = 2  # Viendo "Y-"
 
-        # Apply rotation and translation
         glPushMatrix()
         robot.opera.translate(current_pos_x * ROBOT_SCALE, current_pos_y * ROBOT_SCALE)
         for _ in range(int(robot.remRotation / abs(robot.delta_theta))):
